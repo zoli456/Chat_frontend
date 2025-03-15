@@ -1,0 +1,112 @@
+.chat-box {
+    max-height: 650px; /* Increased height */
+    min-height: 400px; /* Ensures enough space */
+    overflow-y: auto; /* Enables scrolling */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background: #f9f9f9;
+}
+
+.emoji-picker-container {
+    position: absolute;
+    bottom: 50px; /* Adjust this value as needed */
+    left: 0;
+    z-index: 10;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode {
+    background-color: #121212;
+    color: white;
+}
+.dark-mode .card {
+    background-color: #222831;
+    color: #EEEEEE;
+}
+.dark-mode .form {
+    background-color: #393E46;
+    color: #EEEEEE;
+}
+.dark-mode .chat-box {
+    background-color: #00ADB5;
+    color: #EEEEEE;
+}
+.light .card {
+    background-color: #F8F9FA;
+    color: #212529;
+}
+.light .form {
+    background-color: #FFFFFF;
+    color: #212529;
+}
+.light .chat-box {
+    background-color: #FFFFFF;
+    color: #212529;
+}
+
+.fade-in {
+    opacity: 0;
+    animation: fadeIn 0.5s ease-in forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-text {
+    white-space: pre-wrap; /* Supports multiline messages */
+    word-wrap: break-word;
+    max-width: 100%; /* Prevents overly wide messages */
+    padding: 5px;
+}
+
+
+.message-text {
+    padding: 2px 5px; /* Reduce padding */
+    font-size: 0.9rem; /* Slightly smaller text */
+    line-height: 1; /* Reduce line spacing */
+}
+
+.chat-box {
+    padding: 5px; /* Reduce overall padding */
+}
+
+.message-timestamp {
+    margin-top: 0; /* Decrease top margin */
+    font-size: 0.75rem; /* Make timestamp smaller */
+    color: #888 !important;/* Slightly lighter for readability */
+    text-align: right;
+}
+
+.card.mb-2.p-2 {
+    margin-bottom: 4px !important; /* Reduce space between messages */
+    padding: 4px !important; /* Decrease padding inside message cards */
+}
+
+textarea {
+    line-height : 1.1 !important;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.fade-out {
+    animation: fadeOut 0.5s ease-out forwards;
+}
+
