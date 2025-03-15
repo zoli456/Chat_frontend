@@ -8,6 +8,7 @@ import "./Chat.css";
 import Picker from "emoji-picker-react";
 import {Gavel, LogOut, Trash2, Volume2, VolumeOff} from "lucide-react";
 import Swal from "sweetalert2";
+import {apiRequest} from "./Utils";
 const showAlert = (title, text, icon) => {
     Swal.fire({ title, text, icon });
 };
@@ -110,13 +111,6 @@ const Chat = ({ token, user, setToken }) => {
             }
         });
 
-        const handleForceLogout = () => {
-            localStorage.removeItem("token");
-            setToken(null);
-            navigate("/login");
-            showAlert("Logged out", "You have been logged out because you logged in from another device.", "warning");
-        };
-
         socket.current.on("user_kicked", () => {
             setIsMuted(true);
                 localStorage.removeItem("token");
@@ -166,13 +160,20 @@ const Chat = ({ token, user, setToken }) => {
             }
         });
 
-        socket.current.on("force_logout", handleForceLogout);
+        socket.current.on("force_logout", ({ userId }) => {
+            if (userId == user.id) {
+                localStorage.removeItem("token");
+                setToken(null);
+                navigate("/login");
+                showAlert("Logged out", "You have been logged out because you logged in from another device.", "warning");
+            }
+        });
 
         return () => {
             socket.current.off("message");
             socket.current.off("typing");
             socket.current.off("update_users");
-            socket.current.off("force_logout", handleForceLogout);
+            socket.current.off("force_logout");
             socket.current.off("message_deleted");
             socket.current.off("user_muted");
             socket.current.off("user_unmuted");
@@ -182,26 +183,6 @@ const Chat = ({ token, user, setToken }) => {
             socket.current.disconnect();
         };
     }, [token, navigate, setToken, user.id]);
-
-    const apiRequest = async (endpoint, method = "GET", token, body = null) => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/${endpoint}`, {
-                method,
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: body ? JSON.stringify(body) : null,
-            });
-
-            if (!response.ok) throw new Error(`Failed: ${response.statusText}`);
-
-            return response.json();
-        } catch (error) {
-            console.error(`API Request Error (${method} ${endpoint}):`, error);
-            throw error;
-        }
-    };
 
     const sendMessage = async () => {
         if (isMuted) {
@@ -354,12 +335,6 @@ const Chat = ({ token, user, setToken }) => {
         socket.current.emit("typing");
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        setToken(null);
-        navigate("/login");
-    };
-
     const onEmojiClick = (emojiData) => {
         setMessage((prevMessage) => prevMessage + emojiData.emoji);
     };
@@ -369,11 +344,7 @@ const Chat = ({ token, user, setToken }) => {
             <Card className="p-4">
                 <div className="d-flex justify-content-between">
                     <h2>Chat Room</h2>
-                    <Button variant="danger" onClick={handleLogout}>Logout</Button>
                 </div>
-                <h5 className="mt-3">
-                    Your Login: <strong>{user.username}</strong>
-                </h5>
                 <div className="chat-box">
                     {messages.map((msg, index) => (
                         <Card key={index} className={`mb-2 p-2 position-relative ${msg.fading ? "fade-out" : "fade-in"}`}>
