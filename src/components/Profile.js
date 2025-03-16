@@ -26,24 +26,44 @@ const Profile = ({ user }) => {
                     return false;
                 }
 
-                return { oldPassword, newPassword };
+                return { oldPassword, newPassword,confirmPassword };
             }
         });
 
         if (formValues) {
-            console.log("Old password:", formValues.oldPassword);
-            console.log("New password:", formValues.newPassword);
-            Swal.fire("Success", "Password changed successfully!", "success");
+            try {
+                const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/user/change-password`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem("token")}`
+                    },
+                    body: JSON.stringify(formValues)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    Swal.fire("Success", "Password changed successfully!", "success");
+                } else {
+                    Swal.fire("Error", data.message || "Password change failed", "error");
+                }
+            } catch (error) {
+                Swal.fire("Error", "Something went wrong", "error");
+            }
         }
     };
+
 
     return (
         <div className="container mt-5">
             <h1>Profile</h1>
-            <p>Name: {user?.username}</p>
-            <p>Email: {user?.email}</p>
-            <p>Roles: {user?.roles?.join(", ") || "User"}</p>
-            <p>Account Created: {new Date(user?.createdAt).toLocaleString()}</p>
+            <p><strong>Name:</strong> {user?.username}</p>
+            <p><strong>Email:</strong> {user?.email}</p>
+            <p><strong>Roles:</strong> {user?.roles?.join(", ") || "User"}</p>
+            <p><strong>Gender:</strong> {user?.gender}</p>
+            <p><strong>Birthdate:</strong> {new Date(user?.birthdate).toLocaleDateString()}</p>
+            <p><strong>Account Created:</strong> {new Date(user?.createdAt).toLocaleString()}</p>
             <button className="btn btn-primary" onClick={handleChangePassword}>
                 Change Password
             </button>

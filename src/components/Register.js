@@ -7,17 +7,31 @@ const Register = () => {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [gender, setGender] = useState("");
+    const [birthdate, setBirthdate] = useState("");
     const navigate = useNavigate();
 
     const handleRegister = async (e) => {
         e.preventDefault();
+        if (password !== confirmPassword) {
+            Swal.fire({
+                title: "Error!",
+                text: "Passwords do not match",
+                icon: "error",
+                confirmButtonText: "OK"
+            });
+            return;
+        }
+
         try {
             const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, email, password }),
+                body: JSON.stringify({ username, email, password,confirmPassword, gender, birthdate }),
             });
             const data = await response.json();
+
             if (response.ok) {
                 Swal.fire({
                     title: "Success!",
@@ -60,6 +74,22 @@ const Register = () => {
                     <Form.Group>
                         <Form.Label>Password</Form.Label>
                         <Form.Control type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Label>Confirm Password</Form.Label>
+                        <Form.Control type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Label>Gender</Form.Label>
+                        <Form.Select value={gender} onChange={(e) => setGender(e.target.value)} required>
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </Form.Select>
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Label>Birthdate</Form.Label>
+                        <Form.Control type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} required />
                     </Form.Group>
                     <Button type="submit" className="mt-3">Register</Button>
                 </Form>
