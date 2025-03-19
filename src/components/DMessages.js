@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
+import {ToastContainer} from "react-toastify";
+import { io } from "socket.io-client";
+import "react-toastify/dist/ReactToastify.css";
 import { apiRequest } from "./Utils";
+import {useNavigate} from "react-router-dom";
+import "./DMessages.css";
+
+const socket = io("http://localhost:5000", { transports: ["websocket"] });
 
 const DMessages = ({ token }) => {
     const [messages, setMessages] = useState([]);
     const [view, setView] = useState("incoming");
     const [newMessage, setNewMessage] = useState({ recipient: "", subject: "", content: "" });
+    const navigate = useNavigate();
+    const [charCount, setCharCount] = useState(0);
+    useEffect(() => {
+        if (!token) {
+            navigate("/login");
+        }
+    },[token])
 
     useEffect(() => {
         if (view !== "new") {
@@ -53,7 +67,7 @@ const DMessages = ({ token }) => {
             <p><strong>From:</strong> ${msg.Sender?.username || msg.Recipient?.username}</p>
             <p><strong>Date:</strong> ${new Date(msg.createdAt).toLocaleString()}</p>
             <hr>
-            <p>${msg.text}</p>
+            <p>${msg.content}</p>
         `,
             confirmButtonText: "Close",
             showCancelButton: true,
@@ -68,16 +82,18 @@ const DMessages = ({ token }) => {
 
     const handleMessageChange = (e) => {
         const value = e.target.value;
-        if (value.length <= 2048) {
+        if (value.length <= 2000) {
             setNewMessage({ ...newMessage, content: value });
+            setCharCount(value.length);
         }
     };
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
         try {
-            await apiRequest("dmessages", "POST", token, newMessage);
+            const sentMessage = await apiRequest("dmessages", "POST", token, newMessage);
             setNewMessage({ recipient: "", subject: "", content: "" });
+            socket.emit("sendMessage", sentMessage);
             Swal.fire("Success", "Message sent!", "success");
         } catch (error) {
             Swal.fire("Error", "Failed to send message.", "error");
@@ -86,6 +102,7 @@ const DMessages = ({ token }) => {
 
     return (
         <div className="container mt-5">
+            <ToastContainer />
             <h1>Messages</h1>
             <div className="mb-3">
                 <button className="btn btn-primary me-2" onClick={() => setView("incoming")}>Incoming</button>
@@ -139,7 +156,13 @@ const DMessages = ({ token }) => {
                             value={newMessage.content}
                             onChange={handleMessageChange}
                             required
+                            style={{ height: "auto", minHeight: "100px", overflow: "hidden" }}
+                            onInput={(e) => {
+                                e.target.style.height = "auto";
+                                e.target.style.height = `${e.target.scrollHeight}px`;
+                            }}
                         />
+                        <small className="text-muted">{charCount}/2000</small>
                     </div>
                     <button type="submit" className="btn btn-primary">Send</button>
                 </form>

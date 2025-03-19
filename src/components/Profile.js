@@ -1,7 +1,14 @@
-import React from "react";
+import React, {useEffect} from "react";
 import Swal from "sweetalert2";
+import {useNavigate} from "react-router-dom";
 
 const Profile = ({ user }) => {
+    const navigate = useNavigate();
+    useEffect(() => {
+        if (!user) {
+            navigate("/login");
+        }
+    },[user])
     const handleChangePassword = async () => {
         const { value: formValues } = await Swal.fire({
             title: "Change Password",

@@ -59,8 +59,8 @@ const Register = () => {
     };
 
     return (
-        <Container className="mt-5">
-            <Card className="p-4">
+        <Container className="mt-5" style={{ width: "100%", maxWidth: "600px" }}>
+            <Card className="p-4" >
                 <h2>Register</h2>
                 <Form onSubmit={handleRegister}>
                     <Form.Group>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import {Container, Card, Form, Button} from "react-bootstrap";
-import io from "socket.io-client";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -25,7 +24,7 @@ const showConfirm = async (title, text, confirmButtonText) => {
     return result.isConfirmed;
 };
 
-const Chat = ({ token, user, setToken }) => {
+const Chat = ({ token, user, setToken,socket }) => {
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
     const [typing, setTyping] = useState(null);
@@ -33,7 +32,7 @@ const Chat = ({ token, user, setToken }) => {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const chatEndRef = useRef(null);
     const navigate = useNavigate();
-    const socket = useRef(null);
+    //const socket = useRef(null);
     const [isMuted, setIsMuted] = useState(false);
 
     useEffect(() => {
@@ -56,8 +55,6 @@ const Chat = ({ token, user, setToken }) => {
             return;
         }
 
-        socket.current = io("http://localhost:5000", { auth: { token } });
-
         const fetchMessages = async () => {
             try {
                 const data = await apiRequest("messages", "GET", token);
@@ -72,20 +69,24 @@ const Chat = ({ token, user, setToken }) => {
 
         fetchMessages();
 
-        socket.current.on("message", (msg) => {
+        if (socket) socket.emit("entered_chat");
+
+        socket.on("message", (msg) => {
             setMessages((prev) => [...prev, msg].slice(-30)); // Keep last 30 messages
             setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         });
 
-        socket.current.on("typing", (username) => {
-            setTyping(username);
-            setTimeout(() => setTyping(null), 3000);
+        socket.on("typing", (username) => {
+            if (username !== user.username) {
+                setTyping(username);
+                setTimeout(() => setTyping(null), 3000);
+            }
         });
 
-        socket.current.on("update_users", (users) => {
+        socket.on("update_users", (users) => {
             setOnlineUsers(users);
         });
-        socket.current.on("message_deleted", ({ id }) => {
+        socket.on("message_deleted", ({ id }) => {
             setMessages((prev) =>
                 prev.map((msg) =>
                     msg.id.toString() === id.toString() ? { ...msg, fading: true } : msg
@@ -96,11 +97,10 @@ const Chat = ({ token, user, setToken }) => {
             }, 500);
         });
 
-        socket.current.on("user_muted", ({ userId:mutedUserId, reason, expiresAt }) => {
+        socket.on("notify_user_muted", ({ userId:mutedUserId, reason, expiresAt }) => {
             if (mutedUserId == user.id) {
-                setMessage("");
                 setIsMuted(true);
-                showAlert("You got muted", `Reason: ${reason}. Duration: ${expiresAt ? new Date(expiresAt).toLocaleString() : "Permanent"}`, "warning");
+                Swal.fire("You have been muted", `Reason: ${reason}. Ends: ${expiresAt ? new Date(expiresAt).toLocaleString() : "Permanent"}`, "error");
             }
             if (user?.roles?.includes("admin")) {
                 setMessages((prevMessages) =>
@@ -110,23 +110,7 @@ const Chat = ({ token, user, setToken }) => {
                 );
             }
         });
-
-        socket.current.on("user_kicked", () => {
-            setIsMuted(true);
-                localStorage.removeItem("token");
-                setToken(null);
-                navigate("/login");
-            showAlert("You have been kicked", "You have been removed from the chat.", "error");
-        });
-
-        socket.current.on("user_banned", ({ userId:bannedUserId, reason, expiresAt }) => {
-            if (bannedUserId == user.id) {
-                setIsMuted(true);
-                localStorage.removeItem("token");
-                setToken(null);
-                navigate("/login");
-                showAlert("You have been banned", `Reason: ${reason}. End date: ${expiresAt ? new Date(expiresAt).toLocaleString() : "Permanent"}`, "error");
-            }
+        socket.on("notify_user_banned", ({ userId:bannedUserId, reason, expiresAt }) => {
             if (user?.roles?.includes("admin")) {
                 setMessages((prevMessages) =>
                     prevMessages.map((msg) =>
@@ -136,7 +120,7 @@ const Chat = ({ token, user, setToken }) => {
             }
         });
 
-        socket.current.on("user_unmuted", ({ userId }) => {
+        socket.on("user_unmuted", ({ userId }) => {
             if (userId == user.id) {
                 showAlert("Unmuted", "You have been unmuted.", "success");
                 setIsMuted(false);
@@ -150,7 +134,7 @@ const Chat = ({ token, user, setToken }) => {
             }
         });
 
-        socket.current.on("user_unbanned", ({ userId }) => {
+        socket.on("user_unbanned", ({ userId }) => {
             if (user?.roles?.includes("admin")) {
                 setMessages((prevMessages) =>
                     prevMessages.map((msg) =>
@@ -160,33 +144,22 @@ const Chat = ({ token, user, setToken }) => {
             }
         });
 
-        socket.current.on("force_logout", ({ userId }) => {
-            if (userId == user.id) {
-                localStorage.removeItem("token");
-                setToken(null);
-                navigate("/login");
-                showAlert("Logged out", "You have been logged out because you logged in from another device.", "warning");
-            }
-        });
-
         return () => {
-            socket.current.off("message");
-            socket.current.off("typing");
-            socket.current.off("update_users");
-            socket.current.off("force_logout");
-            socket.current.off("message_deleted");
-            socket.current.off("user_muted");
-            socket.current.off("user_unmuted");
-            socket.current.off("user_kicked");
-            socket.current.off("user_banned");
-            socket.current.off("user_unbanned");
-            socket.current.disconnect();
+            socket.off("message");
+            socket.off("typing");
+            socket.off("update_users");
+            socket.off("message_deleted");
+            socket.off("notify_user_banned");
+            socket.off("notify_user_muted");
+            socket.off("user_unmuted");
+            socket.off("user_unbanned");
+           // socket.on.disconnect();
         };
     }, [token, navigate, setToken, user.id]);
 
     const sendMessage = async () => {
         if (isMuted) {
-            alert("You are muted and cannot send messages.");
+            Swal.fire("You cant send messages", `You are muted and cannot send messages.`, "error");
             return;
         }
         if (message.trim()) {
@@ -332,7 +305,7 @@ const Chat = ({ token, user, setToken }) => {
     };
 
     const handleTypingEvent = () => {
-        socket.current.emit("typing");
+        socket.emit("typing", user.username);
     };
 
     const onEmojiClick = (emojiData) => {
