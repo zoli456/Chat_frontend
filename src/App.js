@@ -9,9 +9,12 @@ import Register from "./components/Register";
 import Chat from "./components/Chat";
 import DMessages from "./components/DMessages";
 import Profile from "./components/Profile";
+import {Forum} from "./components/Forum/Forum";
 import LandingPage from "./components/LandingPage";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
+import TopicDiscussion from "./components/Forum/TopicDiscussion";
+import {Topics} from "./components/Forum/Topics";
 
 const App = () => {
     const [token, setToken] = useState(localStorage.getItem("token"));
@@ -101,9 +104,10 @@ const App = () => {
     }, [token]);
 
     useEffect(() => {
-        document.body.className = darkMode ? "dark-mode" : "";
+        document.body.classList.toggle("dark-mode", darkMode);
         localStorage.setItem("darkMode", darkMode);
     }, [darkMode]);
+
 
     const handleLogout = () => {
         setToken(null);
@@ -136,11 +140,15 @@ const App = () => {
                                         <li className="nav-item"><Link className="nav-link" to="/chat">Chat</Link></li>
                                         <li className="nav-item"><Link className="nav-link" to="/messages">Messages</Link></li>
                                         <li className="nav-item"><Link className="nav-link" to="/profile">Profile</Link></li>
+                                        <li className="nav-item"><Link className="nav-link" to="/forum">Forum</Link></li>
                                     </>
                                 )}
                             </ul>
                         </div>
-                        <button onClick={() => setDarkMode(!darkMode)} className="btn btn-outline-dark">
+                        <button
+                            onClick={() => setDarkMode(!darkMode)}
+                            className={`btn ${darkMode ? "btn-light" : "btn-dark"}`}
+                        >
                             {darkMode ? "Light Mode" : "Dark Mode"}
                         </button>
                         {token ? (
@@ -156,6 +164,9 @@ const App = () => {
                     <Route path="/chat" element={token && user ? <Chat token={token} user={user} setToken={setToken} socket={socketRef.current} /> : <Navigate to="/login" />} />
                     <Route path="/messages" element={token && user ? <DMessages token={token} /> : <Navigate to="/login" />} />
                     <Route path="/profile" element={token && user ? <Profile user={user} /> : <Navigate to="/login" />} />
+                    <Route path="/forum" element={token && user ? <Forum token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
+                    <Route path="/forum/:subforumId" element={token && user ? <Topics token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
+                    { <Route path="/forum/:subforumId/topic/:topicId" element={token && user ? <TopicDiscussion token={token} user={user} darkMode={darkMode} /> : <Navigate to="/login" />} /> }
                     <Route path="/" element={<LandingPage />} />
                 </Routes>
             </Router>
