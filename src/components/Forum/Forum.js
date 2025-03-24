@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest } from "../Utils";
-import Swal from "sweetalert2";
 import { Plus, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 
 const Forum = ({ token, user, darkMode }) => {
     const [categories, setCategories] = useState([]);

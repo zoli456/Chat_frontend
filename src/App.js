@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, {useState, useEffect, useRef, useCallback} from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import io from "socket.io-client";
 import { jwtDecode } from "jwt-decode";
@@ -108,7 +108,6 @@ const App = () => {
         localStorage.setItem("darkMode", darkMode);
     }, [darkMode]);
 
-
     const handleLogout = () => {
         setToken(null);
         setUser(null);
@@ -161,12 +160,12 @@ const App = () => {
                 <Routes>
                     <Route path="/login" element={<Login setToken={setToken} />} />
                     <Route path="/register" element={<Register />} />
-                    <Route path="/chat" element={token && user ? <Chat token={token} user={user} setToken={setToken} socket={socketRef.current} /> : <Navigate to="/login" />} />
+                    <Route path="/chat" element={token && user ? <Chat token={token} user={user} setToken={setToken} socket={socketRef.current} darkMode={darkMode}/> : <Navigate to="/login" />} />
                     <Route path="/messages" element={token && user ? <DMessages token={token} /> : <Navigate to="/login" />} />
                     <Route path="/profile" element={token && user ? <Profile user={user} /> : <Navigate to="/login" />} />
                     <Route path="/forum" element={token && user ? <Forum token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
                     <Route path="/forum/:subforumId" element={token && user ? <Topics token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
-                    { <Route path="/forum/:subforumId/topic/:topicId" element={token && user ? <TopicDiscussion token={token} user={user} darkMode={darkMode} /> : <Navigate to="/login" />} /> }
+                    { <Route path="/forum/:subforumId/topic/:topicId" element={token && user ? <TopicDiscussion token={token} user={user} darkMode={darkMode} socket={socketRef.current}/> : <Navigate to="/login" />} /> }
                     <Route path="/" element={<LandingPage />} />
                 </Routes>
             </Router>

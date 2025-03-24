@@ -1,8 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import { apiRequest } from "../Utils";
-import Swal from "sweetalert2";
 import { Trash2, Edit3 } from "lucide-react";
+import Swal from "sweetalert2";
 
 const Topics = ({ token, user, darkMode }) => {
     const { subforumId } = useParams();
@@ -100,7 +100,7 @@ const Topics = ({ token, user, darkMode }) => {
             <div className="mt-3">
                 <input
                     type="text"
-                    className={`form-control ${darkMode ? "bg-dark" : "bg-light"} text-light`}
+                    className={`form-control ${darkMode ? "bg-dark text-light" : "bg-light text-dark"}`}
                     placeholder="Create a new topic..."
                     value={newTopic}
                     onChange={e => setNewTopic(e.target.value)}

@@ -3,28 +3,26 @@ import {Container, Card, Form, Button} from "react-bootstrap";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "./Chat.css";
 import Picker from "emoji-picker-react";
 import {Gavel, LogOut, Trash2, Volume2, VolumeOff} from "lucide-react";
+import { apiRequest } from "./Utils.js";
+import "./Chat.css";
 import Swal from "sweetalert2";
-import {apiRequest} from "./Utils";
-const showAlert = (title, text, icon) => {
-    Swal.fire({ title, text, icon });
-};
-
-const showConfirm = async (title, text, confirmButtonText) => {
-    const result = await Swal.fire({
-        title,
-        text,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText,
-        cancelButtonText: "Cancel",
-    });
-    return result.isConfirmed;
-};
-
-const Chat = ({ token, user, setToken,socket }) => {
+const Chat = ({ token, user, setToken,socket, darkMode }) => {
+    const showAlert = (title, text, icon) => {
+        Swal.fire({ title, text, icon });
+    };
+    const showConfirm = async (title, text, confirmButtonText) => {
+        const result = await Swal.fire({
+            title,
+            text,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText,
+            cancelButtonText: "Cancel",
+        });
+        return result.isConfirmed;
+    };
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
     const [typing, setTyping] = useState(null);
@@ -32,7 +30,6 @@ const Chat = ({ token, user, setToken,socket }) => {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const chatEndRef = useRef(null);
     const navigate = useNavigate();
-    //const socket = useRef(null);
     const [isMuted, setIsMuted] = useState(false);
 
     useEffect(() => {
@@ -71,22 +68,22 @@ const Chat = ({ token, user, setToken,socket }) => {
 
         if (socket) socket.emit("entered_chat");
 
-        socket.on("message", (msg) => {
+        socket.on("chat_message", (msg) => {
             setMessages((prev) => [...prev, msg].slice(-30)); // Keep last 30 messages
             setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         });
 
-        socket.on("typing", (username) => {
+        socket.on("chat_typing", (username) => {
             if (username !== user.username) {
                 setTyping(username);
                 setTimeout(() => setTyping(null), 3000);
             }
         });
 
-        socket.on("update_users", (users) => {
+        socket.on("chat_update_users", (users) => {
             setOnlineUsers(users);
         });
-        socket.on("message_deleted", ({ id }) => {
+        socket.on("chat_message_deleted", ({ id }) => {
             setMessages((prev) =>
                 prev.map((msg) =>
                     msg.id.toString() === id.toString() ? { ...msg, fading: true } : msg
@@ -145,10 +142,10 @@ const Chat = ({ token, user, setToken,socket }) => {
         });
 
         return () => {
-            socket.off("message");
-            socket.off("typing");
-            socket.off("update_users");
-            socket.off("message_deleted");
+            socket.off("chat_message");
+            socket.off("chat_typing");
+            socket.off("chat_update_users");
+            socket.off("chat_message_deleted");
             socket.off("notify_user_banned");
             socket.off("notify_user_muted");
             socket.off("user_unmuted");
@@ -305,7 +302,7 @@ const Chat = ({ token, user, setToken,socket }) => {
     };
 
     const handleTypingEvent = () => {
-        socket.emit("typing", user.username);
+        socket.emit("chat_typing", user.username);
     };
 
     const onEmojiClick = (emojiData) => {
@@ -374,7 +371,7 @@ const Chat = ({ token, user, setToken,socket }) => {
                     <Form.Control
                         as="textarea"
                         rows={1}
-                        className="mx-2"
+                        className={`mx-2 ${darkMode ? "bg-dark text-light" : "bg-light text-dark"}`}
                         value={message}
                         onChange={(e) => {
                             if (!isMuted && e.target.value.length <= 512) {

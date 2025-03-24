@@ -1,3 +1,4 @@
+const Swal = require("sweetalert2");
 const apiRequest = async (endpoint, method = "GET", token, body = null) => {
     try {
         const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/${endpoint}`, {
