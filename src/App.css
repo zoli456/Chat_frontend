@@ -30,9 +30,3 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
-
-:root[class~="dark"] div:where(.swal2-container) div:where(.swal2-popup){
-  background-color: #353434;
-  z-index: 1;
-  border: 1px solid #666666;
-}
