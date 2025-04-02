@@ -21,7 +21,7 @@ const Topics = ({ token, user, darkMode }) => {
 
     const handleCreateTopic = () => {
         if (!newTopic.trim()) return;
-        apiRequest("forum/topics", "POST", token, { subforumId, title: newTopic })
+        apiRequest(`forum/subforums/${subforumId}/topics`, "POST", token, { title: newTopic })
             .then(data => setTopics([...topics, data]))
             .catch(err => console.error("Error creating topic:", err));
     };

@@ -17,4 +17,10 @@ const apiRequest = async (endpoint, method = "GET", token, body = null) => {
         throw error;
     }
 };
-module.exports = {apiRequest}
+
+const decodeHtml = (html) => {
+    const txt = document.createElement("textarea");
+    txt.innerHTML = html;
+    return txt.value;
+};
+export {apiRequest, decodeHtml};

@@ -1,0 +1,15 @@
+.dark-mode .text-muted {
+    color: #FFFFFF !important;
+}
+
+.dark-mode .list-group-item {
+    background-color: #222831 !important;
+}
+
+.dark-mode strong {
+    color: #FFFFFF !important;
+}
+
+.dark-mode span {
+    color: #FFFFFF !important;
+}

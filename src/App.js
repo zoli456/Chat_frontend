@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, useCallback} from "react";
+import React, {useState, useEffect, useRef} from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import io from "socket.io-client";
 import { jwtDecode } from "jwt-decode";
@@ -7,7 +7,7 @@ import { toast, ToastContainer } from "react-toastify";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Chat from "./components/Chat";
-import DMessages from "./components/DMessages";
+import DMessages from "./components/DirectMessages/DMessages";
 import Profile from "./components/Profile";
 import {Forum} from "./components/Forum/Forum";
 import LandingPage from "./components/LandingPage";
@@ -31,10 +31,15 @@ const App = () => {
             }
             try {
                 const decodedToken = jwtDecode(token);
-                if (decodedToken.exp * 1000 < Date.now()) {
-                    handleLogout();
+                const expirationTime = decodedToken.exp * 1000; // Convert to milliseconds
+                const currentTime = Date.now();
+                const timeLeft = expirationTime - currentTime;
+
+                if (timeLeft <= 0) {
+                    await handleLogout();
                     return;
                 }
+
                 const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/user`, {
                     method: "GET",
                     headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
@@ -42,8 +47,14 @@ const App = () => {
                 if (!response.ok) throw new Error("Failed to fetch user data");
                 const data = await response.json();
                 setUser(data);
+                const logoutTimer = setTimeout(() => {
+                    handleLogout();
+                    Swal.fire("Session Expired", "Your session has expired. Please log in again.", "warning");
+                }, timeLeft);
+
+                return () => clearTimeout(logoutTimer); // Cleanup on token change
             } catch (error) {
-                handleLogout();
+                await handleLogout();
             } finally {
                 setIsLoading(false);
             }
@@ -108,11 +119,32 @@ const App = () => {
         localStorage.setItem("darkMode", darkMode);
     }, [darkMode]);
 
-    const handleLogout = () => {
-        setToken(null);
-        setUser(null);
-        localStorage.removeItem("token");
-        setIsLoading(false);
+    const handleLogout = async () => {
+        try {
+            if (token) {
+                await fetch(`${process.env.REACT_APP_BASE_URL}/api/auth/logout`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                });
+            }
+        } catch (error) {
+            console.error("Logout error:", error);
+        } finally {
+            // Clean up local state regardless of API call success
+            setToken(null);
+            setUser(null);
+            localStorage.removeItem("token");
+            setIsLoading(false);
+
+            // Disconnect socket if it exists
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+            }
+        }
     };
 
     if (isLoading) {
@@ -161,7 +193,8 @@ const App = () => {
                     <Route path="/login" element={<Login setToken={setToken} />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/chat" element={token && user ? <Chat token={token} user={user} setToken={setToken} socket={socketRef.current} darkMode={darkMode}/> : <Navigate to="/login" />} />
-                    <Route path="/messages" element={token && user ? <DMessages token={token} /> : <Navigate to="/login" />} />
+                    <Route path="/messages" element={token && user ? <DMessages token={token} socket={socketRef.current}/> : <Navigate to="/login" />} />
+                    <Route path="/messages/:id" element={<DMessages token={token} socket={socketRef.current}/>} />
                     <Route path="/profile" element={token && user ? <Profile user={user} /> : <Navigate to="/login" />} />
                     <Route path="/forum" element={token && user ? <Forum token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
                     <Route path="/forum/:subforumId" element={token && user ? <Topics token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
