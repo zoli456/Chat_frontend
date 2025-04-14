@@ -31,6 +31,8 @@ const Chat = ({ token, user, setToken,socket, darkMode }) => {
     const chatEndRef = useRef(null);
     const navigate = useNavigate();
     const [isMuted, setIsMuted] = useState(false);
+    const emojiPickerRef = useRef();
+    const emojiButtonRef = useRef();
 
     useEffect(() => {
         if (!token) {
@@ -153,6 +155,25 @@ const Chat = ({ token, user, setToken,socket, darkMode }) => {
            // socket.on.disconnect();
         };
     }, [token, navigate, setToken, user.id]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // Check if click is outside both picker and button
+            if (emojiPickerRef.current &&
+                !emojiPickerRef.current.contains(event.target) &&
+                !emojiButtonRef.current.contains(event.target)) {
+                setShowEmojiPicker(false);
+            }
+        };
+
+        if (showEmojiPicker) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showEmojiPicker]);
 
     const sendMessage = async () => {
         if (isMuted) {
@@ -367,7 +388,14 @@ const Chat = ({ token, user, setToken,socket, darkMode }) => {
                 </div>
 
                 <div className="d-flex align-items-center mt-2" style={{ position: "relative" }}>
-                    <Button variant="secondary" onClick={() => setShowEmojiPicker(!showEmojiPicker)} disabled={isMuted}>😀</Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        disabled={isMuted}
+                        ref={emojiButtonRef}
+                    >
+                        😀
+                    </Button>
                     <Form.Control
                         as="textarea"
                         rows={1}
@@ -392,7 +420,16 @@ const Chat = ({ token, user, setToken,socket, darkMode }) => {
                         disabled={isMuted}
                     />
                     {showEmojiPicker && (
-                        <div className="emoji-picker-container">
+                        <div
+                            className="emoji-picker-container"
+                            ref={emojiPickerRef}
+                            style={{
+                                position: 'absolute',
+                                bottom: '100%',
+                                left: 0,
+                                zIndex: 1000
+                            }}
+                        >
                             <Picker onEmojiClick={onEmojiClick} />
                         </div>
                     )}
