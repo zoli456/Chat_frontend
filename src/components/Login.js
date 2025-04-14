@@ -2,19 +2,31 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Container, Card, Form, Button } from "react-bootstrap";
 import Swal from "sweetalert2";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 const Login = ({ setToken }) => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [captchaToken, setCaptchaToken] = useState(null);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!captchaToken) {
+            Swal.fire({
+                icon: "error",
+                title: "Verification Required",
+                text: "Please complete the captcha verification."
+            });
+            return;
+        }
+
         try {
             const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify({ username, password, captchaToken }),
             });
 
             const data = await response.json();
@@ -70,6 +82,12 @@ const Login = ({ setToken }) => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
+                        />
+                    </div>
+                    <div className="mb-3 d-flex justify-content-center"> {/* Centered container */}
+                        <HCaptcha
+                            sitekey={process.env.REACT_APP_HCAPTCHA_SITE_KEY}
+                            onVerify={(token) => setCaptchaToken(token)}
                         />
                     </div>
                     <Button type="submit" className="w-100">Login</Button>
