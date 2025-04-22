@@ -1,3 +1,94 @@
+/* Base styles */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Dark mode overrides for Bootstrap components */
+[data-bs-theme=dark] {
+  color-scheme: dark;
+}
+
+.dark-mode {
+  --bs-body-bg: #121212;
+  --bs-body-color: #e0e0e0;
+  --bs-border-color: #373737;
+}
+
+/* Custom dark mode styles for specific elements */
+.dark-mode .card {
+  background-color: var(--bs-gray-900);
+  border-color: var(--bs-gray-800);
+}
+
+.dark-mode .modal-content {
+  background-color: var(--bs-gray-900);
+  border-color: var(--bs-gray-800);
+}
+
+.dark-mode .list-group-item {
+  background-color: var(--bs-gray-900);
+  border-color: var(--bs-gray-800);
+  color: var(--bs-gray-100);
+}
+
+.dark-mode .form-control,
+.dark-mode .form-select {
+  background-color: var(--bs-gray-800);
+  border-color: var(--bs-gray-700);
+  color: var(--bs-gray-100);
+}
+
+.dark-mode .form-control:focus,
+.dark-mode .form-select:focus {
+  background-color: var(--bs-gray-800);
+  border-color: var(--bs-gray-600);
+  color: var(--bs-gray-100);
+  box-shadow: 0 0 0 0.25rem rgba(100, 100, 100, 0.25);
+}
+
+.dark-mode .btn-outline-secondary {
+  border-color: var(--bs-gray-600);
+  color: var(--bs-gray-300);
+}
+
+.dark-mode .btn-outline-secondary:hover {
+  background-color: var(--bs-gray-700);
+  border-color: var(--bs-gray-600);
+  color: var(--bs-gray-100);
+}
+
+/* Link colors */
+.dark-mode a {
+  color: #4dabf7;
+}
+
+.dark-mode a:hover {
+  color: #74c0fc;
+}
+
+/* Table styles */
+.dark-mode .table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.05);
+  --bs-table-hover-bg: rgba(255, 255, 255, 0.075);
+  color: var(--bs-gray-100);
+}
+
+/* Navbar */
+.dark-mode .navbar {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Loading spinner */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -8,25 +99,72 @@
 }
 
 .spinner {
-  width: 50px;
-  height: 50px;
-  border: 5px solid rgba(0, 0, 0, 0.1);
-  border-top: 5px solid #007bff;
+  width: 3rem;
+  height: 3rem;
+  border: 0.25em solid rgba(255, 255, 255, 0.1);
+  border-left-color: #4dabf7;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
 
-.app-container {
-  opacity: 0;
-  animation: fadeIn 0.5s ease-in-out forwards;
+/* Toast notifications */
+.Toastify__toast-container {
+  --toastify-color-light: #fff;
+  --toastify-color-dark: #121212;
+  --toastify-text-color-light: #212529;
+  --toastify-text-color-dark: #e0e0e0;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@media (max-width: 768px) {
+  .navbar-collapse {
+    padding-top: 1rem;
+  }
+
+  .navbar .btn {
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+}
+/* Light theme - default */
+.swal2-popup {
+  background: #ffffff !important;
+  color: #545454 !important;
+}
+
+.swal2-title, .swal2-content, .swal2-html-container {
+  color: #545454 !important;
+}
+
+.swal2-input, .swal2-file, .swal2-textarea {
+  background-color: #ffffff !important;
+  color: #545454 !important;
+  border-color: #d9d9d9 !important;
+}
+
+/* Dark theme override */
+.dark-mode .swal2-popup {
+  background: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+.dark-mode .swal2-title,
+.dark-mode .swal2-content,
+.dark-mode .swal2-html-container {
+  color: #ffffff !important;
+}
+
+.dark-mode .swal2-input,
+.dark-mode .swal2-file,
+.dark-mode .swal2-textarea {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+  border-color: #3d3d3d !important;
+}
+
+.dark-mode .swal2-confirm {
+  background-color: #3d3d3d !important;
 }

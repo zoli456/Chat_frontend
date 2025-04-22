@@ -1,25 +1,31 @@
-import React, {useState, useEffect, useRef} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import io from "socket.io-client";
 import { jwtDecode } from "jwt-decode";
 import Swal from "sweetalert2";
 import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Chat from "./components/Chat";
 import DMessages from "./components/DirectMessages/DMessages";
 import Profile from "./components/Profile";
-import {Forum} from "./components/Forum/Forum";
+import { Forum } from "./components/Forum/Forum";
 import LandingPage from "./components/LandingPage";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 import TopicDiscussion from "./components/Forum/TopicDiscussion";
-import {Topics} from "./components/Forum/Topics";
+import { Topics } from "./components/Forum/Topics";
 
 const App = () => {
     const [token, setToken] = useState(localStorage.getItem("token"));
     const [user, setUser] = useState(null);
-    const [darkMode, setDarkMode] = useState(localStorage.getItem("darkMode") === "true");
+    const [darkMode, setDarkMode] = useState(() => {
+        const savedMode = localStorage.getItem("darkMode");
+        return savedMode !== null
+            ? savedMode === "true"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    });
     const [isLoading, setIsLoading] = useState(true);
     const socketRef = useRef(null);
 
@@ -31,7 +37,7 @@ const App = () => {
             }
             try {
                 const decodedToken = jwtDecode(token);
-                const expirationTime = decodedToken.exp * 1000; // Convert to milliseconds
+                const expirationTime = decodedToken.exp * 1000;
                 const currentTime = Date.now();
                 const timeLeft = expirationTime - currentTime;
 
@@ -42,7 +48,10 @@ const App = () => {
 
                 const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/user`, {
                     method: "GET",
-                    headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
                 });
                 if (!response.ok) throw new Error("Failed to fetch user data");
                 const data = await response.json();
@@ -52,7 +61,7 @@ const App = () => {
                     Swal.fire("Session Expired", "Your session has expired. Please log in again.", "warning");
                 }, timeLeft);
 
-                return () => clearTimeout(logoutTimer); // Cleanup on token change
+                return () => clearTimeout(logoutTimer);
             } catch (error) {
                 await handleLogout();
             } finally {
@@ -66,18 +75,14 @@ const App = () => {
     useEffect(() => {
         if (!token) return;
 
-        // Prevent multiple connections
         if (socketRef.current) {
             socketRef.current.disconnect();
         }
-
         socketRef.current = io("http://localhost:5000", { auth: { token } });
-
         socketRef.current.on("connect", () => {
             socketRef.current.emit("user_connected", jwtDecode(token).username);
         });
-
-        socketRef.current.on("newDM", ({ sender, subject }) => {
+        socketRef.current.on("newDirectMessage", ({ sender, subject }) => {
             toast.info(`New DM from ${sender}: "${subject}"`, {
                 position: "top-right",
                 autoClose: 5000,
@@ -87,7 +92,6 @@ const App = () => {
                 draggable: true,
             });
         });
-
         socketRef.current.on("user_kicked", () => {
             handleLogout();
             Swal.fire("You have been kicked", "You have been removed from the chat.", "error");
@@ -105,7 +109,7 @@ const App = () => {
 
         return () => {
             if (socketRef.current) {
-                socketRef.current.off("newDM");
+                socketRef.current.off("newDirectMessage");
                 socketRef.current.off("user_kicked");
                 socketRef.current.off("force_logout");
                 socketRef.current.off("user_banned");
@@ -115,7 +119,9 @@ const App = () => {
     }, [token]);
 
     useEffect(() => {
-        document.body.classList.toggle("dark-mode", darkMode);
+        // Bootstrap 5.3+ dark mode
+        document.documentElement.setAttribute("data-bs-theme", darkMode ? "dark" : "light");
+        document.body.className = darkMode ? "dark-mode" : "light-mode";
         localStorage.setItem("darkMode", darkMode);
     }, [darkMode]);
 
@@ -133,13 +139,11 @@ const App = () => {
         } catch (error) {
             console.error("Logout error:", error);
         } finally {
-            // Clean up local state regardless of API call success
             setToken(null);
             setUser(null);
             localStorage.removeItem("token");
             setIsLoading(false);
 
-            // Disconnect socket if it exists
             if (socketRef.current) {
                 socketRef.current.disconnect();
                 socketRef.current = null;
@@ -149,57 +153,105 @@ const App = () => {
 
     if (isLoading) {
         return (
-            <div className="loading-container">
-                <div className="spinner"></div>
-                <p>Checking user...</p>
+            <div className="d-flex flex-column justify-content-center align-items-center vh-100">
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="mt-3">Checking user...</p>
             </div>
         );
     }
 
     return (
-        <div className={`app-container ${darkMode ? "dark" : "light"}`}>
-            <ToastContainer />
+        <div className={`app-container ${darkMode ? "dark-mode" : "light-mode"}`}>
+            <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme={darkMode ? "dark" : "light"}
+            />
             <Router>
-                <nav className="navbar navbar-expand-lg navbar-light bg-light">
-                    <div className="container">
+                <nav className={`navbar navbar-expand-lg ${darkMode ? "navbar-dark bg-dark" : "navbar-light bg-light"}`}>
+                    <div className="container-fluid">
                         <Link className="navbar-brand" to="/">MyApp</Link>
-                        <div className="collapse navbar-collapse">
-                            <ul className="navbar-nav me-auto">
-                                <li className="nav-item"><Link className="nav-link" to="/">Landing</Link></li>
+                        <button
+                            className="navbar-toggler"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#navbarContent"
+                            aria-controls="navbarContent"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation"
+                        >
+                            <span className="navbar-toggler-icon"></span>
+                        </button>
+                        <div className="collapse navbar-collapse" id="navbarContent">
+                            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+                                <li className="nav-item">
+                                    <Link className="nav-link" to="/">Landing</Link>
+                                </li>
                                 {token && user && (
                                     <>
-                                        <li className="nav-item"><Link className="nav-link" to="/chat">Chat</Link></li>
-                                        <li className="nav-item"><Link className="nav-link" to="/messages">Messages</Link></li>
-                                        <li className="nav-item"><Link className="nav-link" to="/profile">Profile</Link></li>
-                                        <li className="nav-item"><Link className="nav-link" to="/forum">Forum</Link></li>
+                                        <li className="nav-item">
+                                            <Link className="nav-link" to="/chat">Chat</Link>
+                                        </li>
+                                        <li className="nav-item">
+                                            <Link className="nav-link" to="/messages">Messages</Link>
+                                        </li>
+                                        <li className="nav-item">
+                                            <Link className="nav-link" to="/profile">Profile</Link>
+                                        </li>
+                                        <li className="nav-item">
+                                            <Link className="nav-link" to="/forum">Forum</Link>
+                                        </li>
                                     </>
                                 )}
                             </ul>
+                            <div className="d-flex align-items-center">
+                                <button
+                                    onClick={() => setDarkMode(!darkMode)}
+                                    className={`btn btn-sm ${darkMode ? "btn-light" : "btn-dark"}`}
+                                    aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                                >
+                                    {darkMode ? (
+                                        <><i className="bi bi-sun-fill me-1"></i> Light Mode</>
+                                    ) : (
+                                        <><i className="bi bi-moon-fill me-1"></i> Dark Mode</>
+                                    )}
+                                </button>
+                                {token ? (
+                                    <button
+                                        onClick={handleLogout}
+                                        className="btn btn-sm btn-danger ms-2"
+                                    >
+                                        <i className="bi bi-box-arrow-right me-1"></i> Logout
+                                    </button>
+                                ) : (
+                                    <Link to="/login" className="btn btn-sm btn-primary ms-2">
+                                        <i className="bi bi-box-arrow-in-right me-1"></i> Login
+                                    </Link>
+                                )}
+                            </div>
                         </div>
-                        <button
-                            onClick={() => setDarkMode(!darkMode)}
-                            className={`btn ${darkMode ? "btn-light" : "btn-dark"}`}
-                        >
-                            {darkMode ? "Light Mode" : "Dark Mode"}
-                        </button>
-                        {token ? (
-                            <button onClick={handleLogout} className="btn btn-danger ms-2">Logout</button>
-                        ) : (
-                            <Link to="/login" className="btn btn-primary ms-2">Login</Link>
-                        )}
                     </div>
                 </nav>
                 <Routes>
-                    <Route path="/login" element={<Login setToken={setToken} />} />
-                    <Route path="/register" element={<Register />} />
+                    <Route path="/login" element={<Login setToken={setToken} darkMode={darkMode} />} />
+                    <Route path="/register" element={<Register darkMode={darkMode} />} />
                     <Route path="/chat" element={token && user ? <Chat token={token} user={user} setToken={setToken} socket={socketRef.current} darkMode={darkMode}/> : <Navigate to="/login" />} />
-                    <Route path="/messages" element={token && user ? <DMessages token={token} socket={socketRef.current}/> : <Navigate to="/login" />} />
-                    <Route path="/messages/:id" element={<DMessages token={token} socket={socketRef.current}/>} />
-                    <Route path="/profile" element={token && user ? <Profile user={user} /> : <Navigate to="/login" />} />
+                    <Route path="/messages" element={token && user ? <DMessages token={token} socket={socketRef.current} darkMode={darkMode}/> : <Navigate to="/login" />} />
+                    <Route path="/messages/:id" element={<DMessages token={token} socket={socketRef.current} darkMode={darkMode}/>} />
+                    <Route path="/profile" element={token && user ? <Profile user={user} darkMode={darkMode} /> : <Navigate to="/login" />} />
                     <Route path="/forum" element={token && user ? <Forum token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
                     <Route path="/forum/:subforumId" element={token && user ? <Topics token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
-                    { <Route path="/forum/:subforumId/topic/:topicId" element={token && user ? <TopicDiscussion token={token} user={user} darkMode={darkMode} socket={socketRef.current}/> : <Navigate to="/login" />} /> }
-                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/forum/:subforumId/topic/:topicId" element={token && user ? <TopicDiscussion token={token} user={user} darkMode={darkMode} socket={socketRef.current}/> : <Navigate to="/login" />} />
+                    <Route path="/" element={<LandingPage darkMode={darkMode} />} />
                 </Routes>
             </Router>
         </div>
