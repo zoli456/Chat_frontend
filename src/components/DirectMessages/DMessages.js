@@ -4,7 +4,7 @@ import { apiRequest, decodeHtml } from "../Utils";
 import Quill from "quill";
 import "quill/dist/quill.snow.css";
 import "react-toastify/dist/ReactToastify.css";
-import "./DMessages.css";
+import Swal from "sweetalert2";
 
 const DMessages = ({ token, socket }) => {
     const [messages, setMessages] = useState([]);
@@ -213,6 +213,11 @@ const DMessages = ({ token, socket }) => {
             fetchMessages("outgoing", 1); // Refresh outgoing messages
         } catch (error) {
             console.error("Failed to send message:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Message Failed',
+                text: error?.message || 'Unable to send the message. Please try again later.',
+            });
         }
     };
 
