@@ -1,42 +1,58 @@
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { apiRequest } from "./Utils";
 
-const Profile = ({ user }) => {
+const Profile = ({ user: currentUser, darkMode }) => {
+    const { id } = useParams();
+    const [profileUser, setProfileUser] = useState(null);
     const [activeSessions, setActiveSessions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isCurrentUser, setIsCurrentUser] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!user) {
-            navigate("/login");
+        const fetchProfile = async () => {
+            try {
+                setIsLoading(true);
+
+                // Determine if we're viewing our own profile
+                const viewingOwnProfile = !id || id === currentUser?.id;
+                setIsCurrentUser(viewingOwnProfile);
+
+                // Fetch the profile user data
+                const userId = viewingOwnProfile ? currentUser.id : id;
+                const data = await apiRequest(`user/${userId}`, "GET", localStorage.getItem("token"));
+                setProfileUser(data);
+
+                // Only fetch sessions for current user
+                if (viewingOwnProfile) {
+                    await fetchActiveSessions();
+                }
+            } catch (error) {
+                console.error("Error fetching profile:", error);
+                toast.error("Failed to load profile");
+                navigate("/users");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (currentUser || id) {
+            fetchProfile();
         } else {
-            fetchActiveSessions();
+            navigate("/login");
         }
-    }, [user]);
+    }, [id, currentUser]);
 
     const fetchActiveSessions = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/auth/sessions`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("token")}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to fetch sessions");
-            }
-
-            const data = await response.json();
+            const data = await apiRequest("auth/sessions", "GET", localStorage.getItem("token"));
             setActiveSessions(data.sessions || []);
         } catch (error) {
             console.error("Error fetching sessions:", error);
             toast.error("Failed to load active sessions");
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -53,20 +69,13 @@ const Profile = ({ user }) => {
             });
 
             if (result.isConfirmed) {
-                const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/auth/sessions/revoke/${sessionId}`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem("token")}`
-                    }
-                });
-
-                if (response.ok) {
-                    toast.success("Session revoked successfully");
-                    fetchActiveSessions(); // Refresh the list
-                } else {
-                    throw new Error("Failed to revoke session");
-                }
+                await apiRequest(
+                    `auth/sessions/revoke/${sessionId}`,
+                    "POST",
+                    localStorage.getItem("token")
+                );
+                toast.success("Session revoked successfully");
+                fetchActiveSessions(); // Refresh the list
             }
         } catch (error) {
             console.error("Error revoking session:", error);
@@ -104,24 +113,15 @@ const Profile = ({ user }) => {
 
         if (formValues) {
             try {
-                const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/user/change-password`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem("token")}`
-                    },
-                    body: JSON.stringify(formValues)
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    Swal.fire("Success", "Password changed successfully!", "success");
-                } else {
-                    Swal.fire("Error", data.message || "Password change failed", "error");
-                }
+                const data = await apiRequest(
+                    "user/change-password",
+                    "POST",
+                    localStorage.getItem("token"),
+                    formValues
+                );
+                Swal.fire("Success", "Password changed successfully!", "success");
             } catch (error) {
-                Swal.fire("Error", "Something went wrong", "error");
+                Swal.fire("Error", error.message || "Something went wrong", "error");
             }
         }
     };
@@ -143,72 +143,106 @@ const Profile = ({ user }) => {
         return new Date(dateString).toLocaleString();
     };
 
+    if (isLoading) {
+        return (
+            <div className="d-flex justify-content-center align-items-center vh-100">
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (!profileUser) {
+        return (
+            <div className="container mt-5">
+                <div className="alert alert-danger">User not found</div>
+            </div>
+        );
+    }
+
     return (
-        <div className="container mt-5">
-            <h1>Profile</h1>
+        <div className={`container mt-5 ${darkMode ? "text-white" : ""}`}>
+            <h1>Profile {!isCurrentUser && `- ${profileUser.username}`}</h1>
             <div className="row">
                 <div className="col-md-6">
-                    <div className="card mb-4">
-                        <div className="card-header">
+                    <div className={`card mb-4 ${darkMode ? "bg-dark" : ""}`}>
+                        <div className={`card-header ${darkMode ? "bg-secondary" : ""}`}>
                             <h5>Account Information</h5>
                         </div>
                         <div className="card-body">
-                            <p><strong>Name:</strong> {user?.username}</p>
-                            <p><strong>Email:</strong> {user?.email}</p>
-                            <p><strong>Roles:</strong> {user?.roles?.join(", ") || "User"}</p>
-                            <p><strong>Gender:</strong> {user?.gender}</p>
-                            <p><strong>Birthdate:</strong> {new Date(user?.birthdate).toLocaleDateString()}</p>
-                            <p><strong>Account Created:</strong> {new Date(user?.createdAt).toLocaleString()}</p>
-                            <button className="btn btn-primary" onClick={handleChangePassword}>
-                                Change Password
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                            <p><strong>Name:</strong> {profileUser.username}</p>
+                            <p><strong>Email:</strong> {profileUser.email}</p>
+                            <p><strong>Roles:</strong> {profileUser.roles?.join(", ") || "User"}</p>
+                            <p><strong>Gender:</strong> {profileUser.gender}</p>
+                            <p><strong>Birthdate:</strong> {new Date(profileUser.birthdate).toLocaleDateString()}</p>
+                            <p><strong>Account Created:</strong> {new Date(profileUser.createdAt).toLocaleString()}</p>
+                            <p>
+                                <strong>Ban Status:</strong> {profileUser.isBanned ?
+                                <span className="text-danger">Banned until {new Date(profileUser.banExpiresAt).toLocaleString()}</span> :
+                                <span className="text-success">Not Banned</span>}
+                            </p>
 
-                <div className="col-md-6">
-                    <div className="card">
-                        <div className="card-header">
-                            <h5>Active Sessions</h5>
-                        </div>
-                        <div className="card-body">
-                            {isLoading ? (
-                                <div className="text-center">
-                                    <div className="spinner-border text-primary" role="status">
-                                        <span className="visually-hidden">Loading...</span>
-                                    </div>
-                                </div>
-                            ) : activeSessions.length === 0 ? (
-                                <p>No active sessions found</p>
-                            ) : (
-                                <div className="list-group">
-                                    {activeSessions.map((session) => (
-                                        <div key={session.id} className="list-group-item">
-                                            <div className="d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <strong>{formatDeviceInfo(session.deviceInfo)}</strong>
-                                                    <div className="text-muted small">
-                                                        IP: {session.ipAddress || 'Unknown'}
-                                                    </div>
-                                                    <div className="text-muted small">
-                                                        Logged in: {formatDate(session.createdAt)}
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    className="btn btn-sm btn-outline-danger"
-                                                    onClick={() => handleRevokeSession(session.id)}
-                                                    disabled={session.id === user.currentSessionId}
-                                                >
-                                                    Revoke
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                            <p>
+                                <strong>Mute Status:</strong> {profileUser.isMuted ?
+                                <span className="text-warning">Muted until {new Date(profileUser.muteExpiresAt).toLocaleString()}</span> :
+                                <span className="text-success">Not Muted</span>}
+                            </p>
+
+                            {isCurrentUser && (
+                                <button
+                                    className={`btn ${darkMode ? "btn-light" : "btn-primary"}`}
+                                    onClick={handleChangePassword}
+                                >
+                                    Change Password
+                                </button>
                             )}
                         </div>
                     </div>
                 </div>
+
+                {isCurrentUser && (
+                    <div className="col-md-6">
+                        <div className={`card ${darkMode ? "bg-dark" : ""}`}>
+                            <div className={`card-header ${darkMode ? "bg-secondary" : ""}`}>
+                                <h5>Active Sessions</h5>
+                            </div>
+                            <div className="card-body">
+                                {activeSessions.length === 0 ? (
+                                    <p>No active sessions found</p>
+                                ) : (
+                                    <div className="list-group">
+                                        {activeSessions.map((session) => (
+                                            <div
+                                                key={session.id}
+                                                className={`list-group-item ${darkMode ? "bg-dark text-white" : ""}`}
+                                            >
+                                                <div className="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <strong>{formatDeviceInfo(session.deviceInfo)}</strong>
+                                                        <div className={`small ${darkMode ? "text-light" : "text-muted"}`}>
+                                                            IP: {session.ipAddress || 'Unknown'}
+                                                        </div>
+                                                        <div className={`small ${darkMode ? "text-light" : "text-muted"}`}>
+                                                            Logged in: {formatDate(session.createdAt)}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        className="btn btn-sm btn-outline-danger"
+                                                        onClick={() => handleRevokeSession(session.id)}
+                                                        disabled={session.id === currentUser.currentSessionId}
+                                                    >
+                                                        Revoke
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

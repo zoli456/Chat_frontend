@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { apiRequest, decodeHtml } from "../Utils";
+import { apiRequest, decodeHtml } from "./Utils";
 import Quill from "quill";
 import "quill/dist/quill.snow.css";
 import "react-toastify/dist/ReactToastify.css";

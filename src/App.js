@@ -8,10 +8,11 @@ import "react-toastify/dist/ReactToastify.css";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Chat from "./components/Chat";
-import DMessages from "./components/DirectMessages/DMessages";
+import DMessages from "./components/DMessages";
 import Profile from "./components/Profile";
 import { Forum } from "./components/Forum/Forum";
 import LandingPage from "./components/LandingPage";
+import Users from "./components/Users";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 import TopicDiscussion from "./components/Forum/TopicDiscussion";
@@ -46,16 +47,23 @@ const App = () => {
                     return;
                 }
 
-                const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/user`, {
+                // Get user ID from decoded token
+                const userId = decodedToken.id;
+
+                // Send the ID in the request URL
+                const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/user/${userId}`, {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${token}`,
                         "Content-Type": "application/json"
                     },
                 });
+
                 if (!response.ok) throw new Error("Failed to fetch user data");
+
                 const data = await response.json();
                 setUser(data);
+
                 const logoutTimer = setTimeout(() => {
                     handleLogout();
                     Swal.fire("Session Expired", "Your session has expired. Please log in again.", "warning");
@@ -210,6 +218,9 @@ const App = () => {
                                         <li className="nav-item">
                                             <Link className="nav-link" to="/forum">Forum</Link>
                                         </li>
+                                        <li className="nav-item">
+                                            <Link className="nav-link" to="/users">Users</Link>
+                                        </li>
                                     </>
                                 )}
                             </ul>
@@ -248,6 +259,8 @@ const App = () => {
                     <Route path="/messages" element={token && user ? <DMessages token={token} socket={socketRef.current} darkMode={darkMode}/> : <Navigate to="/login" />} />
                     <Route path="/messages/:id" element={<DMessages token={token} socket={socketRef.current} darkMode={darkMode}/>} />
                     <Route path="/profile" element={token && user ? <Profile user={user} darkMode={darkMode} /> : <Navigate to="/login" />} />
+                    <Route path="/profile/:id?" element={token && user ? <Profile user={user} darkMode={darkMode} /> : <Navigate to="/login" />} />
+                    <Route path="/users" element={token && user ? <Users token={token} darkMode={darkMode} /> : <Navigate to="/login" />} />
                     <Route path="/forum" element={token && user ? <Forum token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
                     <Route path="/forum/:subforumId" element={token && user ? <Topics token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
                     <Route path="/forum/:subforumId/topic/:topicId" element={token && user ? <TopicDiscussion token={token} user={user} darkMode={darkMode} socket={socketRef.current}/> : <Navigate to="/login" />} />
