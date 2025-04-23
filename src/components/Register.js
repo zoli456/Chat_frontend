@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Container, Card, Form, Button } from "react-bootstrap";
 import Swal from "sweetalert2";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 const Register = () => {
     const [username, setUsername] = useState("");
@@ -10,6 +11,7 @@ const Register = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [gender, setGender] = useState("");
     const [birthdate, setBirthdate] = useState("");
+    const [captchaToken, setCaptchaToken] = useState(null);
     const [errors, setErrors] = useState({});
     const navigate = useNavigate();
 
@@ -31,7 +33,14 @@ const Register = () => {
     const handleRegister = async (e) => {
         e.preventDefault();
 
-        if (!validateForm()) {
+        if (!validateForm()) return;
+
+        if (!captchaToken) {
+            Swal.fire({
+                icon: "error",
+                title: "Verification Required",
+                text: "Please complete the captcha verification."
+            });
             return;
         }
 
@@ -39,8 +48,17 @@ const Register = () => {
             const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, email, password, confirmPassword, gender, birthdate }),
+                body: JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    confirmPassword,
+                    gender,
+                    birthdate,
+                    captchaToken
+                }),
             });
+
             const data = await response.json();
 
             if (response.ok) {
@@ -51,7 +69,6 @@ const Register = () => {
                     confirmButtonText: "OK"
                 }).then(() => navigate("/login"));
             } else {
-                // Handle backend validation errors
                 if (data.errors) {
                     setErrors(data.errors.reduce((acc, error) => {
                         acc[error.path] = error.msg;
@@ -79,7 +96,7 @@ const Register = () => {
 
     return (
         <Container className="mt-5" style={{ width: "100%", maxWidth: "600px" }}>
-            <Card className="p-4" >
+            <Card className="p-4">
                 <h2>Register</h2>
                 <Form onSubmit={handleRegister}>
                     <Form.Group>
@@ -163,7 +180,13 @@ const Register = () => {
                             {errors.birthdate}
                         </Form.Control.Feedback>
                     </Form.Group>
-                    <Button type="submit" className="mt-3">Register</Button>
+                    <div className="my-3 d-flex justify-content-center">
+                        <HCaptcha
+                            sitekey={process.env.REACT_APP_HCAPTCHA_SITE_KEY}
+                            onVerify={token => setCaptchaToken(token)}
+                        />
+                    </div>
+                    <Button type="submit" className="w-100">Register</Button>
                 </Form>
                 <Link to="/login" className="mt-3 d-block text-center">Already have an account? Login here</Link>
             </Card>
