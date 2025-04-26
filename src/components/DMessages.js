@@ -6,7 +6,7 @@ import "quill/dist/quill.snow.css";
 import "react-toastify/dist/ReactToastify.css";
 import Swal from "sweetalert2";
 
-const DMessages = ({ token, socket }) => {
+const DMessages = ({ token, socket, user }) => {
     const [messages, setMessages] = useState([]);
     const [view, setView] = useState("incoming");
     const [newMessage, setNewMessage] = useState({ recipient: "", subject: "", content: "" });
@@ -35,12 +35,6 @@ const DMessages = ({ token, socket }) => {
         clipboard: { matchVisual: true },
     };
     const formats = ["bold", "italic", "underline", "strike", "list", "link", "video", "blockquote" ,"p" ,"s", "u"];
-
-    useEffect(() => {
-        if (!token) {
-            navigate("/login");
-        }
-    }, [token]);
 
     useEffect(() => {
         if (view !== "new" && !id) {
@@ -206,6 +200,16 @@ const DMessages = ({ token, socket }) => {
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
+
+        if (user?.isMuted) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Muted',
+                text: 'You are muted and cannot send private messages.',
+            });
+            return;
+        }
+
         try {
             await apiRequest("dmessages", "POST", token, newMessage);
             setNewMessage({ recipient: "", subject: "", content: "" });

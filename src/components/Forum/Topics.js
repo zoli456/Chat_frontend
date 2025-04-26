@@ -20,9 +20,18 @@ const Topics = ({ token, user, darkMode }) => {
     }, [subforumId, token]);
 
     const handleCreateTopic = () => {
+        if (user?.isMuted) {
+            Swal.fire("Muted", "You are muted and cannot create new topics.", "warning");
+            return;
+        }
+
         if (!newTopic.trim()) return;
+
         apiRequest(`forum/subforums/${subforumId}/topics`, "POST", token, { title: newTopic })
-            .then(data => setTopics([...topics, data]))
+            .then(data => {
+                setTopics([...topics, data]);
+                setNewTopic("");
+            })
             .catch(err => console.error("Error creating topic:", err));
     };
 

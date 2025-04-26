@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Container, Card, Form, Button, Row, Col } from "react-bootstrap";
-import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Picker from "emoji-picker-react";
@@ -38,25 +37,9 @@ const Chat = ({ token, user, setToken, socket, darkMode }) => {
     const emojiButtonRef = useRef();
 
     useEffect(() => {
-        if (!token) {
-            navigate("/login");
-            return;
+        if (user?.isMuted) {
+            setIsMuted(true);
         }
-
-        let decodedUser;
-        try {
-            decodedUser = jwtDecode(token);
-            if (!decodedUser || decodedUser.exp * 1000 < Date.now()) {
-                throw new Error("Token expired");
-            }
-        } catch (error) {
-            console.error("Invalid or expired token:", error);
-            localStorage.removeItem("token");
-            setToken(null);
-            navigate("/login");
-            return;
-        }
-
         const fetchMessages = async () => {
             try {
                 const data = await apiRequest("messages", "GET", token);

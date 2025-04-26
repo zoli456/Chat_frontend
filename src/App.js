@@ -256,8 +256,8 @@ const App = () => {
                     <Route path="/login" element={<Login setToken={setToken} darkMode={darkMode} />} />
                     <Route path="/register" element={<Register darkMode={darkMode} />} />
                     <Route path="/chat" element={token && user ? <Chat token={token} user={user} setToken={setToken} socket={socketRef.current} darkMode={darkMode}/> : <Navigate to="/login" />} />
-                    <Route path="/messages" element={token && user ? <DMessages token={token} socket={socketRef.current} darkMode={darkMode}/> : <Navigate to="/login" />} />
-                    <Route path="/messages/:id" element={<DMessages token={token} socket={socketRef.current} darkMode={darkMode}/>} />
+                    <Route path="/messages" element={token && user ? <DMessages token={token} socket={socketRef.current} user={user}/> : <Navigate to="/login" />} />
+                    <Route path="/messages/:id" element={<DMessages token={token} socket={socketRef.current} user={user}/>} />
                     <Route path="/profile" element={token && user ? <Profile user={user} darkMode={darkMode} /> : <Navigate to="/login" />} />
                     <Route path="/profile/:id?" element={token && user ? <Profile user={user} darkMode={darkMode} /> : <Navigate to="/login" />} />
                     <Route path="/users" element={token && user ? <Users token={token} darkMode={darkMode} /> : <Navigate to="/login" />} />

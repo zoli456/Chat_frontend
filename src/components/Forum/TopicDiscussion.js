@@ -167,13 +167,21 @@ const TopicDiscussion = ({ token, user, socket }) => {
 
 
     const handlePostReply = () => {
+        if (user?.isMuted) {
+            Swal.fire("Muted", "You are currently muted and cannot post messages.", "warning");
+            return;
+        }
+
         if (!quillInstance.current) return;
+
         const textAreaValue = quillInstance.current.root.innerHTML.trim();
         const plainText = quillInstance.current.getText().trim();
+
         if (plainText.length < 3 || plainText.length > 1000) {
             Swal.fire("Error", "Message must be between 3 and 1000 characters.", "error");
             return;
         }
+
         if (editingPost) {
             apiRequest(`forum/posts/${editingPost.id}`, "PUT", token, { content: textAreaValue })
                 .then(() => {
@@ -191,6 +199,7 @@ const TopicDiscussion = ({ token, user, socket }) => {
                 });
         }
     };
+
 
     const handleDeletePost = (postId) => {
         Swal.fire({
