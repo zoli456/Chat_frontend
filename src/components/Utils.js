@@ -23,4 +23,21 @@ const decodeHtml = (html) => {
     txt.innerHTML = html;
     return txt.value;
 };
-export {apiRequest, decodeHtml};
+
+const formatDeviceInfo = (deviceInfo) => {
+    if (!deviceInfo) return "Unknown device";
+
+    if (deviceInfo.includes("Windows")) return "Windows PC";
+    if (deviceInfo.includes("Macintosh")) return "Mac";
+    if (deviceInfo.includes("Linux")) return "Linux PC";
+    if (deviceInfo.includes("iPhone")) return "iPhone";
+    if (deviceInfo.includes("iPad")) return "iPad";
+    if (deviceInfo.includes("Android")) return "Android Device";
+
+    return deviceInfo.substring(0, 30) + (deviceInfo.length > 30 ? "..." : "");
+};
+
+const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString();
+};
+export {apiRequest, decodeHtml, formatDeviceInfo, formatDate};

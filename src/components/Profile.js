@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
-import { apiRequest } from "./Utils";
+import {apiRequest, formatDate, formatDeviceInfo} from "./Utils";
+import {Dropdown} from "react-bootstrap";
 
 const Profile = ({ user: currentUser, darkMode }) => {
     const { id } = useParams();
@@ -11,6 +12,7 @@ const Profile = ({ user: currentUser, darkMode }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [isCurrentUser, setIsCurrentUser] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [availableRoles, setAvailableRoles] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -33,6 +35,11 @@ const Profile = ({ user: currentUser, darkMode }) => {
                 if (viewingOwnProfile || adminStatus) {
                     await fetchActiveSessions(userId, adminStatus);
                 }
+
+                // Fetch available roles if admin
+                if (adminStatus && !viewingOwnProfile) {
+                    await fetchAvailableRoles();
+                }
             } catch (error) {
                 console.error("Error fetching profile:", error);
                 toast.error("Failed to load profile");
@@ -44,10 +51,41 @@ const Profile = ({ user: currentUser, darkMode }) => {
 
         if (currentUser || id) {
             fetchProfile();
-        } else {
-            navigate("/login");
         }
     }, [id, currentUser]);
+
+    const fetchAvailableRoles = async () => {
+        try {
+            const rolesData = await apiRequest("admin/roles", "GET", localStorage.getItem("token"));
+            // Extract just the role names from the array of objects
+            const roles = rolesData.map(role => role.name);
+            setAvailableRoles(roles);
+        } catch (error) {
+            console.error("Error fetching available roles:", error);
+            toast.error("Failed to load available roles");
+        }
+    };
+
+    const handleRoleChange = async (roleName, action) => {
+        try {
+            await apiRequest(`admin/users/${profileUser.id}/roles`, "POST", localStorage.getItem("token"), { roleName, action });
+
+            // Update local state
+            setProfileUser(prev => {
+                const currentRoles = prev.roles || [];
+                const updatedRoles = action === "add"
+                    ? [...currentRoles, roleName]
+                    : currentRoles.filter(role => role !== roleName);
+
+                return { ...prev, roles: updatedRoles };
+            });
+
+            toast.success(`Role ${action === "add" ? "added" : "removed"} successfully`);
+        } catch (error) {
+            console.error("Error updating roles:", error);
+            toast.error(error.message || "Failed to update roles");
+        }
+    };
 
     const fetchActiveSessions = async (userId, isAdminCheck) => {
         try {
@@ -126,12 +164,7 @@ const Profile = ({ user: currentUser, darkMode }) => {
                     ? `admin/change-password/${profileUser.id}`
                     : "user/change-password";
 
-                const data = await apiRequest(
-                    endpoint,
-                    "POST",
-                    localStorage.getItem("token"),
-                    formValues
-                );
+                await apiRequest(endpoint, "POST", localStorage.getItem("token"), formValues);
                 Swal.fire("Success", "Password changed successfully!", "success");
             } catch (error) {
                 Swal.fire("Error", error.message || "Something went wrong", "error");
@@ -154,7 +187,7 @@ const Profile = ({ user: currentUser, darkMode }) => {
             });
 
             if (result.isConfirmed) {
-                const response = await apiRequest(
+                await apiRequest(
                     `admin/users/${profileUser.id}/status`,
                     "POST",
                     localStorage.getItem("token"),
@@ -176,7 +209,7 @@ const Profile = ({ user: currentUser, darkMode }) => {
             html:
                 !profileUser.isBanned ?
                     `<input id="ban-reason" class="swal2-input" placeholder="Reason (optional)">
-             <input id="ban-duration" type="number" class="swal2-input" placeholder="Duration in minutes (leave empty for permanent)">
+             <input id="ban-duration" type="number" min="1" class="swal2-input" placeholder="Duration in minutes (leave empty for permanent)">
              <div class="small text-muted mt-1">Common durations: 1440 (1 day), 10080 (1 week), 43200 (1 month)</div>` :
                     'Are you sure you want to unban this user?',
             focusConfirm: false,
@@ -208,12 +241,7 @@ const Profile = ({ user: currentUser, darkMode }) => {
                     setProfileUser(prev => ({ ...prev, isBanned: false, banReason: null, banExpiresAt: null }));
                     toast.success("User unbanned successfully");
                 } else {
-                    const response = await apiRequest(
-                        `admin/ban/${profileUser.id}`,
-                        "POST",
-                        localStorage.getItem("token"),
-                        formValues
-                    );
+                    await apiRequest(`admin/ban/${profileUser.id}`, "POST", localStorage.getItem("token"), formValues);
                     setProfileUser(prev => ({
                         ...prev,
                         isBanned: true,
@@ -236,7 +264,7 @@ const Profile = ({ user: currentUser, darkMode }) => {
             html:
                 !profileUser.isMuted ?
                     `<input id="mute-reason" class="swal2-input" placeholder="Reason (optional)">
-             <input id="mute-duration" type="number" class="swal2-input" placeholder="Duration in minutes (leave empty for permanent)">
+             <input id="mute-duration" type="number" min="1" class="swal2-input" placeholder="Duration in minutes (leave empty for permanent)">
              <div class="small text-muted mt-1">Common durations: 60 (1 hour), 1440 (1 day), 10080 (1 week)</div>` :
                     'Are you sure you want to unmute this user?',
             focusConfirm: false,
@@ -260,20 +288,11 @@ const Profile = ({ user: currentUser, darkMode }) => {
         if (formValues) {
             try {
                 if (profileUser.isMuted) {
-                    await apiRequest(
-                        `admin/unmute/${profileUser.id}`,
-                        "POST",
-                        localStorage.getItem("token")
-                    );
+                    await apiRequest(`admin/unmute/${profileUser.id}`, "POST", localStorage.getItem("token"));
                     setProfileUser(prev => ({ ...prev, isMuted: false, muteReason: null, muteExpiresAt: null }));
                     toast.success("User unmuted successfully");
                 } else {
-                    const response = await apiRequest(
-                        `admin/mute/${profileUser.id}`,
-                        "POST",
-                        localStorage.getItem("token"),
-                        formValues
-                    );
+                    await apiRequest(`admin/mute/${profileUser.id}`, "POST", localStorage.getItem("token"), formValues);
                     setProfileUser(prev => ({
                         ...prev,
                         isMuted: true,
@@ -288,23 +307,6 @@ const Profile = ({ user: currentUser, darkMode }) => {
                 toast.error(error.message || "Failed to process mute/unmute request");
             }
         }
-    };
-
-    const formatDeviceInfo = (deviceInfo) => {
-        if (!deviceInfo) return "Unknown device";
-
-        if (deviceInfo.includes("Windows")) return "Windows PC";
-        if (deviceInfo.includes("Macintosh")) return "Mac";
-        if (deviceInfo.includes("Linux")) return "Linux PC";
-        if (deviceInfo.includes("iPhone")) return "iPhone";
-        if (deviceInfo.includes("iPad")) return "iPad";
-        if (deviceInfo.includes("Android")) return "Android Device";
-
-        return deviceInfo.substring(0, 30) + (deviceInfo.length > 30 ? "..." : "");
-    };
-
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleString();
     };
 
     if (isLoading) {
@@ -337,11 +339,72 @@ const Profile = ({ user: currentUser, darkMode }) => {
                         <div className="card-body">
                             <p><strong>Name:</strong> {profileUser.username}</p>
                             <p><strong>Email:</strong> {profileUser.email}</p>
-                            <p><strong>Roles:</strong> {profileUser.roles?.join(", ") || "User"}</p>
+                            <div className="mb-3">
+                                <div className="d-flex align-items-center flex-wrap gap-2">
+                                    <strong>Roles:</strong>
+                                    {profileUser.roles?.length > 0 ? (
+                                        profileUser.roles.map(role => {
+                                            const roleName = typeof role === 'object' ? role.name : role;
+                                            return (
+                                                <div key={roleName} className={`d-flex align-items-center gap-1 rounded-pill px-2 py-1 ${darkMode ? "bg-dark-subtle" : "bg-light"}`}>
+                                                    <span className={darkMode ? "text-white" : ""}>{roleName}</span>
+                                                    {isAdmin && !isCurrentUser && (
+                                                        <button
+                                                            className="btn btn-sm btn-danger p-0 d-flex align-items-center justify-content-center"
+                                                            style={{
+                                                                width: '20px',
+                                                                height: '20px',
+                                                                fontSize: '0.7rem'
+                                                            }}
+                                                            onClick={() => handleRoleChange(roleName, "remove")}
+                                                            aria-label={`Remove ${roleName} role`}
+                                                        >
+                                                            <i className="bi bi-x"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <span className={`${darkMode ? "text-light" : "text-muted"}`}>No roles assigned</span>
+                                    )}
+                                    {isAdmin && !isCurrentUser && (
+                                        <Dropdown>
+                                            <Dropdown.Toggle
+                                                variant="primary"
+                                                size="sm"
+                                                className="d-flex align-items-center"
+                                            >
+                                                <i className="bi bi-plus-lg me-1"></i> Add Role
+                                            </Dropdown.Toggle>
+
+                                            <Dropdown.Menu className={darkMode ? 'bg-dark' : ''}>
+                                                {availableRoles.length > 0 ? (
+                                                    availableRoles
+                                                        .filter(availableRole => {
+                                                            const currentRoleNames = profileUser.roles?.map(r => typeof r === 'object' ? r.name : r);
+                                                            return !currentRoleNames?.includes(availableRole);
+                                                        })
+                                                        .map(role => (
+                                                            <Dropdown.Item
+                                                                key={role}
+                                                                className={darkMode ? 'text-light' : ''}
+                                                                onClick={() => handleRoleChange(role, "add")}
+                                                            >
+                                                                {role}
+                                                            </Dropdown.Item>
+                                                        ))
+                                                ) : (
+                                                    <Dropdown.ItemText className="disabled">No roles available</Dropdown.ItemText>
+                                                )}
+                                            </Dropdown.Menu>
+                                        </Dropdown>
+                                    )}
+                                </div>
+                            </div>
                             <p><strong>Gender:</strong> {profileUser.gender}</p>
                             <p><strong>Birthdate:</strong> {new Date(profileUser.birthdate).toLocaleDateString()}</p>
                             <p><strong>Account Created:</strong> {new Date(profileUser.createdAt).toLocaleString()}</p>
-
                             <p>
                                 <strong>Account Status:</strong> {profileUser.enabled ?
                                 <span className="text-success">Enabled</span> :
