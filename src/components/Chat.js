@@ -4,25 +4,13 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Picker from "emoji-picker-react";
 import { Gavel, LogOut, Trash2, Volume2, VolumeOff } from "lucide-react";
-import { apiRequest } from "./Utils.js";
 import "./Chat.css";
 import Swal from "sweetalert2";
+import { apiRequest,banUser, unbanUser, muteUser, unmuteUser, kickUser, showConfirm} from "./Utils";
 
 const Chat = ({ token, user, setToken, socket, darkMode }) => {
     const showAlert = (title, text, icon) => {
         Swal.fire({ title, text, icon });
-    };
-
-    const showConfirm = async (title, text, confirmButtonText) => {
-        const result = await Swal.fire({
-            title,
-            text,
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText,
-            cancelButtonText: "Cancel",
-        });
-        return result.isConfirmed;
     };
 
     const [messages, setMessages] = useState([]);
@@ -182,40 +170,6 @@ const Chat = ({ token, user, setToken, socket, darkMode }) => {
             }
         }
     };
-
-    const muteUser = async (userId) => {
-        const reasonResult = await Swal.fire({
-            title: "Mute User",
-            input: "text",
-            inputLabel: "Enter reason",
-            showCancelButton: true,
-        });
-        if (reasonResult.isDismissed) { return; }
-
-        const durationResult = await Swal.fire({
-            title: "Mute Duration",
-            input: "number",
-            inputLabel: "Enter duration in minutes (leave empty for permanent)",
-            showCancelButton: true,
-        });
-        if (durationResult.isDismissed) { return; }
-
-        const reason = reasonResult.value;
-        const duration = durationResult.value;
-
-        if (duration && (isNaN(duration) || duration <= 0)) {
-            showAlert("Invalid Input", "Please enter a valid number of minutes.", "error");
-            return;
-        }
-
-        try {
-            await apiRequest(`admin/mute/${userId}`, "POST", token, { reason, duration });
-            showAlert("User Muted", `User has been muted for ${duration ? duration + " minutes" : "permanently"}.`, "success");
-        } catch (error) {
-            console.error("Error muting user:", error);
-        }
-    };
-
     const deleteMessage = async (id) => {
         const confirmed = await showConfirm("Delete Message", "Are you sure you want to delete this message?", "Delete");
         if (!confirmed) return;
@@ -223,81 +177,6 @@ const Chat = ({ token, user, setToken, socket, darkMode }) => {
             await apiRequest(`messages/${id}`, "DELETE", token);
         } catch (error) {
             console.error("Error deleting message:", error);
-        }
-    };
-
-    const unmuteUser = async (userId) => {
-        const confirmed = await showConfirm("Unmute User", "Are you sure you want to unmute this user?", "Unmute");
-        if (!confirmed) return;
-        try {
-            await apiRequest(`admin/unmute/${userId}`, "POST", token);
-            showAlert("User Unmuted", "User has been unmuted.", "success");
-        } catch (error) {
-            console.error("Error unmuting user:", error);
-        }
-    };
-
-    const kickUser = async (userId) => {
-        const result = await Swal.fire({
-            title: "Are you sure?",
-            text: "Do you really want to kick this user?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Yes, kick!",
-            cancelButtonText: "Cancel"
-        });
-
-        if (result.isConfirmed) {
-            try {
-                await apiRequest(`admin/kick/${userId}`, "POST", token);
-                Swal.fire("Success", "User has been kicked from the chat.", "success");
-            } catch (error) {
-                console.error("Error kicking user:", error);
-            }
-        }
-    };
-
-    const banUser = async (userId) => {
-        const reasonResult = await Swal.fire({
-            title: "Ban User",
-            input: "text",
-            inputLabel: "Enter reason",
-            showCancelButton: true,
-        });
-        if (reasonResult.isDismissed) { return; }
-
-        const durationResult = await Swal.fire({
-            title: "Ban Duration",
-            input: "number",
-            inputLabel: "Enter duration in minutes (leave empty for permanent)",
-            showCancelButton: true,
-        });
-        if (durationResult.isDismissed) { return; }
-
-        const reason = reasonResult.value;
-        const duration = durationResult.value;
-
-        if (duration && (isNaN(duration) || duration <= 0)) {
-            showAlert("Invalid Input", "Please enter a valid number of minutes.", "error");
-            return;
-        }
-        try {
-            await apiRequest(`admin/ban/${userId}`, "POST", token, { reason, duration: duration });
-            Swal.fire("Success", `User has been banned for ${duration ? duration + " minutes" : "permanently"}.`, "success");
-        } catch (error) {
-            console.error("Error banning user:", error);
-        }
-    };
-
-    const unbanUser = async (userId) => {
-        const confirmed = await showConfirm("Unban User", "Are you sure you want to unban this user?", "Unban");
-        if (!confirmed) return;
-
-        try {
-            await apiRequest(`admin/unban/${userId}`, "POST", token);
-            showAlert("User Unbanned", "User has been unbanned.", "success");
-        } catch (error) {
-            console.error("Error unbanning user:", error);
         }
     };
 
@@ -330,21 +209,21 @@ const Chat = ({ token, user, setToken, socket, darkMode }) => {
                                                 {user?.roles?.includes("admin") && msg.User?.username !== user.username && (
                                                     <>
                                                         {msg.User?.isMuted ? (
-                                                            <Button variant="success" size="sm" onClick={() => unmuteUser(msg?.User.userId)}>
+                                                            <Button variant="success" size="sm" onClick={() => unmuteUser(msg?.User.userId, token, apiRequest)}>
                                                                 <Volume2 size={16} />
                                                             </Button>
                                                         ) : (
-                                                            <Button variant="warning" size="sm" onClick={() => muteUser(msg?.User.userId)}>
+                                                            <Button variant="warning" size="sm" onClick={() => muteUser(msg?.User.userId, token, apiRequest)}>
                                                                 <VolumeOff size={16} />
                                                             </Button>
                                                         )}
-                                                        <Button variant="danger" size="sm" onClick={() => kickUser(msg?.User.userId)}><LogOut size={16} /></Button>
+                                                        <Button variant="danger" size="sm" onClick={() => kickUser(msg?.User.userId, token, apiRequest)}><LogOut size={16} /></Button>
                                                         {msg.User?.isBanned ? (
-                                                            <Button variant="success" size="sm" onClick={() => unbanUser(msg?.User.userId)}>
+                                                            <Button variant="success" size="sm" onClick={() => unbanUser(msg?.User.userId, token, apiRequest)}>
                                                                 <Gavel size={16} style={{ transform: "rotate(180deg)" }} />
                                                             </Button>
                                                         ) : (
-                                                            <Button variant="dark" size="sm" onClick={() => banUser(msg?.User.userId)}>
+                                                            <Button variant="dark" size="sm" onClick={() => banUser(msg?.User.userId, token, apiRequest)}>
                                                                 <Gavel size={16} />
                                                             </Button>
                                                         )}

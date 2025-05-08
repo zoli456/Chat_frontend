@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
-import {apiRequest, formatDate, formatDeviceInfo} from "./Utils";
 import {Dropdown} from "react-bootstrap";
+import { apiRequest, formatDate, formatDeviceInfo,banUser, unbanUser, muteUser, unmuteUser } from "./Utils";
 
 const Profile = ({ user: currentUser, darkMode }) => {
     const { id } = useParams();
@@ -203,142 +203,6 @@ const Profile = ({ user: currentUser, darkMode }) => {
         }
     };
 
-    const handleBanUser = async () => {
-        const { value: formValues } = await Swal.fire({
-            title: profileUser.isBanned ? 'Unban User' : 'Ban User',
-            html:
-                !profileUser.isBanned ?
-                    `<input id="ban-reason" class="swal2-input" placeholder="Reason (optional)">
-             <input id="ban-duration" type="number" min="1" class="swal2-input" placeholder="Duration in minutes (leave empty for permanent)">
-             <div class="small text-muted mt-1">Common durations: 1440 (1 day), 10080 (1 week), 43200 (1 month)</div>` :
-                    'Are you sure you want to unban this user?',
-            focusConfirm: false,
-            showCancelButton: true,
-            preConfirm: () => {
-                if (profileUser.isBanned) return true;
-
-                const reason = document.getElementById("ban-reason").value;
-                const durationInput = document.getElementById("ban-duration").value;
-                const duration = durationInput ? parseInt(durationInput) : null;
-
-                if (durationInput && isNaN(duration)) {
-                    Swal.showValidationMessage("Please enter a valid number for duration");
-                    return false;
-                }
-
-                return { reason, duration };
-            }
-        });
-
-        if (formValues) {
-            try {
-                if (profileUser.isBanned) {
-                    await apiRequest(
-                        `admin/unban/${profileUser.id}`,
-                        "POST",
-                        localStorage.getItem("token")
-                    );
-                    setProfileUser(prev => ({
-                        ...prev,
-                        isBanned: false,
-                        banInfo: null
-                    }));
-                    toast.success("User unbanned successfully");
-                } else {
-                    await apiRequest(
-                        `admin/ban/${profileUser.id}`,
-                        "POST",
-                        localStorage.getItem("token"),
-                        formValues
-                    );
-                    setProfileUser(prev => ({
-                        ...prev,
-                        isBanned: true,
-                        banInfo: {
-                            reason: formValues.reason || "No reason provided",
-                            expiresAt: formValues.duration ?
-                                new Date(Date.now() + formValues.duration * 60 * 1000).toISOString() :
-                                null,
-                            issuedAt: new Date().toISOString(),
-                            issuedBy: currentUser.username
-                        }
-                    }));
-                    toast.success("User banned successfully");
-                }
-            } catch (error) {
-                toast.error(error.message || "Failed to process ban/unban request");
-            }
-        }
-    };
-
-    const handleMuteUser = async () => {
-        const { value: formValues } = await Swal.fire({
-            title: profileUser.isMuted ? 'Unmute User' : 'Mute User',
-            html:
-                !profileUser.isMuted ?
-                    `<input id="mute-reason" class="swal2-input" placeholder="Reason (optional)">
-             <input id="mute-duration" type="number" min="1" class="swal2-input" placeholder="Duration in minutes (leave empty for permanent)">
-             <div class="small text-muted mt-1">Common durations: 60 (1 hour), 1440 (1 day), 10080 (1 week)</div>` :
-                    'Are you sure you want to unmute this user?',
-            focusConfirm: false,
-            showCancelButton: true,
-            preConfirm: () => {
-                if (profileUser.isMuted) return true;
-
-                const reason = document.getElementById("mute-reason").value;
-                const durationInput = document.getElementById("mute-duration").value;
-                const duration = durationInput ? parseInt(durationInput) : null;
-
-                if (durationInput && isNaN(duration)) {
-                    Swal.showValidationMessage("Please enter a valid number for duration");
-                    return false;
-                }
-
-                return { reason, duration };
-            }
-        });
-
-        if (formValues) {
-            try {
-                if (profileUser.isMuted) {
-                    await apiRequest(
-                        `admin/unmute/${profileUser.id}`,
-                        "POST",
-                        localStorage.getItem("token")
-                    );
-                    setProfileUser(prev => ({
-                        ...prev,
-                        isMuted: false,
-                        muteInfo: null
-                    }));
-                    toast.success("User unmuted successfully");
-                } else {
-                    await apiRequest(
-                        `admin/mute/${profileUser.id}`,
-                        "POST",
-                        localStorage.getItem("token"),
-                        formValues
-                    );
-                    setProfileUser(prev => ({
-                        ...prev,
-                        isMuted: true,
-                        muteInfo: {
-                            reason: formValues.reason || "No reason provided",
-                            expiresAt: formValues.duration ?
-                                new Date(Date.now() + formValues.duration * 60 * 1000).toISOString() :
-                                null,
-                            issuedAt: new Date().toISOString(),
-                            issuedBy: currentUser.username
-                        }
-                    }));
-                    toast.success("User muted successfully");
-                }
-            } catch (error) {
-                toast.error(error.message || "Failed to process mute/unmute request");
-            }
-        }
-    };
-
     if (isLoading) {
         return (
             <div className="d-flex justify-content-center align-items-center vh-100">
@@ -508,13 +372,45 @@ const Profile = ({ user: currentUser, darkMode }) => {
                                     </button>
                                     <button
                                         className={`btn ${profileUser.isBanned ? "btn-success" : "btn-danger"} me-2 mb-2`}
-                                        onClick={handleBanUser}
+                                        onClick={async () => {
+                                            const success = profileUser.isBanned
+                                                ? await unbanUser(profileUser.id, localStorage.getItem("token"), apiRequest)
+                                                : await banUser(profileUser.id, localStorage.getItem("token"), apiRequest);
+                                            if (success) {
+                                                setProfileUser(prev => ({
+                                                    ...prev,
+                                                    isBanned: !prev.isBanned,
+                                                    banInfo: prev.isBanned ? null : {
+                                                        reason: "Reason not specified",
+                                                        expiresAt: null,
+                                                        issuedAt: new Date().toISOString(),
+                                                        issuedBy: currentUser.username
+                                                    }
+                                                }));
+                                            }
+                                        }}
                                     >
                                         {profileUser.isBanned ? 'Unban User' : 'Ban User'}
                                     </button>
                                     <button
                                         className={`btn ${profileUser.isMuted ? "btn-success" : "btn-warning"} me-2 mb-2`}
-                                        onClick={handleMuteUser}
+                                        onClick={async () => {
+                                            const success = profileUser.isMuted
+                                                ? await unmuteUser(profileUser.id, localStorage.getItem("token"), apiRequest)
+                                                : await muteUser(profileUser.id, localStorage.getItem("token"), apiRequest);
+                                            if (success) {
+                                                setProfileUser(prev => ({
+                                                    ...prev,
+                                                    isMuted: !prev.isMuted,
+                                                    muteInfo: prev.isMuted ? null : {
+                                                        reason: "Reason not specified",
+                                                        expiresAt: null,
+                                                        issuedAt: new Date().toISOString(),
+                                                        issuedBy: currentUser.username
+                                                    }
+                                                }));
+                                            }
+                                        }}
                                     >
                                         {profileUser.isMuted ? 'Unmute User' : 'Mute User'}
                                     </button>
