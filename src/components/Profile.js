@@ -238,17 +238,30 @@ const Profile = ({ user: currentUser, darkMode }) => {
                         "POST",
                         localStorage.getItem("token")
                     );
-                    setProfileUser(prev => ({ ...prev, isBanned: false, banReason: null, banExpiresAt: null }));
+                    setProfileUser(prev => ({
+                        ...prev,
+                        isBanned: false,
+                        banInfo: null
+                    }));
                     toast.success("User unbanned successfully");
                 } else {
-                    await apiRequest(`admin/ban/${profileUser.id}`, "POST", localStorage.getItem("token"), formValues);
+                    await apiRequest(
+                        `admin/ban/${profileUser.id}`,
+                        "POST",
+                        localStorage.getItem("token"),
+                        formValues
+                    );
                     setProfileUser(prev => ({
                         ...prev,
                         isBanned: true,
-                        banReason: formValues.reason || "No reason provided",
-                        banExpiresAt: formValues.duration ?
-                            new Date(Date.now() + formValues.duration * 60 * 1000).toISOString() :
-                            null
+                        banInfo: {
+                            reason: formValues.reason || "No reason provided",
+                            expiresAt: formValues.duration ?
+                                new Date(Date.now() + formValues.duration * 60 * 1000).toISOString() :
+                                null,
+                            issuedAt: new Date().toISOString(),
+                            issuedBy: currentUser.username
+                        }
                     }));
                     toast.success("User banned successfully");
                 }
@@ -288,18 +301,35 @@ const Profile = ({ user: currentUser, darkMode }) => {
         if (formValues) {
             try {
                 if (profileUser.isMuted) {
-                    await apiRequest(`admin/unmute/${profileUser.id}`, "POST", localStorage.getItem("token"));
-                    setProfileUser(prev => ({ ...prev, isMuted: false, muteReason: null, muteExpiresAt: null }));
+                    await apiRequest(
+                        `admin/unmute/${profileUser.id}`,
+                        "POST",
+                        localStorage.getItem("token")
+                    );
+                    setProfileUser(prev => ({
+                        ...prev,
+                        isMuted: false,
+                        muteInfo: null
+                    }));
                     toast.success("User unmuted successfully");
                 } else {
-                    await apiRequest(`admin/mute/${profileUser.id}`, "POST", localStorage.getItem("token"), formValues);
+                    await apiRequest(
+                        `admin/mute/${profileUser.id}`,
+                        "POST",
+                        localStorage.getItem("token"),
+                        formValues
+                    );
                     setProfileUser(prev => ({
                         ...prev,
                         isMuted: true,
-                        muteReason: formValues.reason || "No reason provided",
-                        muteExpiresAt: formValues.duration ?
-                            new Date(Date.now() + formValues.duration * 60 * 1000).toISOString() :
-                            null
+                        muteInfo: {
+                            reason: formValues.reason || "No reason provided",
+                            expiresAt: formValues.duration ?
+                                new Date(Date.now() + formValues.duration * 60 * 1000).toISOString() :
+                                null,
+                            issuedAt: new Date().toISOString(),
+                            issuedBy: currentUser.username
+                        }
                     }));
                     toast.success("User muted successfully");
                 }
@@ -418,18 +448,19 @@ const Profile = ({ user: currentUser, darkMode }) => {
                             <p>
                                 <strong>Chat Messages:</strong> {profileUser.chatMessagesCount || 0}
                             </p>
-
                             <p>
                                 <strong>Ban Status: </strong>
                                 {profileUser.isBanned ? (
                                     <>
-                                        <span className="text-danger">
-                                            {profileUser.banExpiresAt === null ? 'Permanently Banned' :
-                                                `Banned until ${new Date(profileUser.banExpiresAt).toLocaleString()}`}
-                                        </span>
-                                        {profileUser.banReason && (
+            <span className="text-danger">
+                {profileUser.banInfo?.expiresAt === null ? 'Permanently Banned' :
+                    `Banned until ${new Date(profileUser.banInfo?.expiresAt).toLocaleString()}`}
+            </span>
+                                        {profileUser.banInfo && (
                                             <div className={`small ${darkMode ? "text-light" : "text-muted"}`}>
-                                                Reason: {profileUser.banReason}
+                                                Reason: {profileUser.banInfo.reason}<br />
+                                                Issued by: {profileUser.banInfo.issuedBy}<br />
+                                                Issued at: {new Date(profileUser.banInfo.issuedAt).toLocaleString()}
                                             </div>
                                         )}
                                     </>
@@ -437,18 +468,19 @@ const Profile = ({ user: currentUser, darkMode }) => {
                                     <span className="text-success">Not Banned</span>
                                 )}
                             </p>
-
                             <p>
                                 <strong>Mute Status: </strong>
                                 {profileUser.isMuted ? (
                                     <>
-                                        <span className="text-warning">
-                                            {profileUser.muteExpiresAt === null ? 'Permanently Muted' :
-                                                `Muted until ${new Date(profileUser.muteExpiresAt).toLocaleString()}`}
-                                        </span>
-                                        {profileUser.muteReason && (
+            <span className="text-warning">
+                {profileUser.muteInfo?.expiresAt === null ? 'Permanently Muted' :
+                    `Muted until ${new Date(profileUser.muteInfo?.expiresAt).toLocaleString()}`}
+            </span>
+                                        {profileUser.muteInfo && (
                                             <div className={`small ${darkMode ? "text-light" : "text-muted"}`}>
-                                                Reason: {profileUser.muteReason}
+                                                Reason: {profileUser.muteInfo.reason}<br />
+                                                Issued by: {profileUser.muteInfo.issuedBy}<br />
+                                                Issued at: {new Date(profileUser.muteInfo.issuedAt).toLocaleString()}
                                             </div>
                                         )}
                                     </>
