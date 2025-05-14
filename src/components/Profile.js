@@ -377,16 +377,8 @@ const Profile = ({ user: currentUser, darkMode }) => {
                                                 ? await unbanUser(profileUser.id, localStorage.getItem("token"), apiRequest)
                                                 : await banUser(profileUser.id, localStorage.getItem("token"), apiRequest);
                                             if (success) {
-                                                setProfileUser(prev => ({
-                                                    ...prev,
-                                                    isBanned: !prev.isBanned,
-                                                    banInfo: prev.isBanned ? null : {
-                                                        reason: "Reason not specified",
-                                                        expiresAt: null,
-                                                        issuedAt: new Date().toISOString(),
-                                                        issuedBy: currentUser.username
-                                                    }
-                                                }));
+                                                const updatedUser = await apiRequest(`user/${profileUser.id}`, "GET", localStorage.getItem("token"));
+                                                setProfileUser(updatedUser);
                                             }
                                         }}
                                     >
@@ -399,16 +391,8 @@ const Profile = ({ user: currentUser, darkMode }) => {
                                                 ? await unmuteUser(profileUser.id, localStorage.getItem("token"), apiRequest)
                                                 : await muteUser(profileUser.id, localStorage.getItem("token"), apiRequest);
                                             if (success) {
-                                                setProfileUser(prev => ({
-                                                    ...prev,
-                                                    isMuted: !prev.isMuted,
-                                                    muteInfo: prev.isMuted ? null : {
-                                                        reason: "Reason not specified",
-                                                        expiresAt: null,
-                                                        issuedAt: new Date().toISOString(),
-                                                        issuedBy: currentUser.username
-                                                    }
-                                                }));
+                                                const updatedUser = await apiRequest(`user/${profileUser.id}`, "GET", localStorage.getItem("token"));
+                                                setProfileUser(updatedUser);
                                             }
                                         }}
                                     >
