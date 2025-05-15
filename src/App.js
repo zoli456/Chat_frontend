@@ -17,6 +17,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 import TopicDiscussion from "./components/Forum/TopicDiscussion";
 import { Topics } from "./components/Forum/Topics";
+import SiteSettings from "./components/SiteSettings";
 
 const App = () => {
     const [token, setToken] = useState(localStorage.getItem("token"));
@@ -221,6 +222,11 @@ const App = () => {
                                         <li className="nav-item">
                                             <Link className="nav-link" to="/users">Users</Link>
                                         </li>
+                                        {(user.roles).includes("admin") && (
+                                            <li className="nav-item">
+                                                <Link className="nav-link" to="/settings">Site Settings</Link>
+                                            </li>
+                                        )}
                                     </>
                                 )}
                             </ul>
@@ -262,6 +268,7 @@ const App = () => {
                     <Route path="/profile/:id?" element={token && user ? <Profile user={user} darkMode={darkMode} /> : <Navigate to="/login" />} />
                     <Route path="/users" element={token && user ? <Users token={token} darkMode={darkMode} /> : <Navigate to="/login" />} />
                     <Route path="/forum" element={token && user ? <Forum token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
+                    <Route path="/settings" element={token && user && user.roles.includes("admin") ? <SiteSettings token={token} darkMode={darkMode} /> : <Navigate to="/" />} />
                     <Route path="/forum/:subforumId" element={token && user ? <Topics token={token} user={user} darkMode={darkMode}/> : <Navigate to="/login" />} />
                     <Route path="/forum/:subforumId/topic/:topicId" element={token && user ? <TopicDiscussion token={token} user={user} darkMode={darkMode} socket={socketRef.current}/> : <Navigate to="/login" />} />
                     <Route path="/" element={<LandingPage darkMode={darkMode} />} />
