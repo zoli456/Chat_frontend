@@ -87,7 +87,7 @@ const App = () => {
         if (socketRef.current) {
             socketRef.current.disconnect();
         }
-        socketRef.current = io("http://localhost:5000", { auth: { token } });
+        socketRef.current = io(process.env.REACT_APP_BASE_URL, { auth: { token } });
         socketRef.current.on("connect", () => {
             socketRef.current.emit("user_connected", jwtDecode(token).username);
         });
