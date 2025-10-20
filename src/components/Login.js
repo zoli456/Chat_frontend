@@ -48,6 +48,8 @@ const Login = ({ setToken }) => {
                     icon: "error",
                     title: "Login Failed",
                     text: data.error || "Invalid credentials."
+                }).then(() => {
+                    window.location.reload(); //Reload page after user close the alert
                 });
             }
         } catch (error) {
@@ -56,6 +58,8 @@ const Login = ({ setToken }) => {
                 icon: "error",
                 title: "An Error Occurred",
                 text: "Please try again."
+            }).then(() => {
+                window.location.reload();
             });
         }
     };
