@@ -22,6 +22,16 @@ const Login = ({ setToken }) => {
             return;
         }
 
+        // Show loading alert
+        Swal.fire({
+            title: "Logging in...",
+            text: "Please wait while we verify your credentials.",
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+        });
+
         try {
             const response = await fetch(`${process.env.REACT_APP_BASE_URL}/api/auth/login`, {
                 method: "POST",
@@ -30,6 +40,9 @@ const Login = ({ setToken }) => {
             });
 
             const data = await response.json();
+
+            Swal.close(); // Close loading alert when request completes
+
             if (response.ok) {
                 localStorage.setItem("token", data.token);
                 setToken(data.token);
@@ -49,11 +62,12 @@ const Login = ({ setToken }) => {
                     title: "Login Failed",
                     text: data.error || "Invalid credentials."
                 }).then(() => {
-                    window.location.reload(); //Reload page after user close the alert
+                    window.location.reload(); // Reload after closing
                 });
             }
         } catch (error) {
             console.error("Login error:", error);
+            Swal.close(); // Make sure to close the loading dialog
             Swal.fire({
                 icon: "error",
                 title: "An Error Occurred",
@@ -88,7 +102,7 @@ const Login = ({ setToken }) => {
                             required
                         />
                     </div>
-                    <div className="mb-3 d-flex justify-content-center"> {/* Centered container */}
+                    <div className="mb-3 d-flex justify-content-center">
                         <HCaptcha
                             sitekey={process.env.REACT_APP_HCAPTCHA_SITE_KEY}
                             onVerify={(token) => setCaptchaToken(token)}
@@ -96,7 +110,9 @@ const Login = ({ setToken }) => {
                     </div>
                     <Button type="submit" className="w-100">Login</Button>
                 </Form>
-                <Link to="/register" className="mt-3 d-block text-center">Don't have an account? Register here</Link>
+                <Link to="/register" className="mt-3 d-block text-center">
+                    Don't have an account? Register here
+                </Link>
             </Card>
         </Container>
     );
